@@ -1,51 +1,33 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
+
+const int neighborsCount = 4;
+const double neighborRadius = 2.5;
 
 typedef struct {
     int id;
-    int x, y, z;
+    double x, y, z;
+    int neighbors;
+    int preNeighbors;
 } Atom;
 
-int inBounds(int x, int y, int z, int gridX, int gridY, int gridZ) {
-    return (x >= 0 && x <= gridX &&
-            y >= 0 && y <= gridY &&
-            z >= 0 && z <= gridZ);
-}
-
-// int neighbor(Atom a, int Lx, int Ly, int Lz, Atom neighbors[]) {
-//     int count = 0;
-//     for (int dx = -1; dx <= 1; dx++) {
-//         for (int dy = -1; dy <= 1; dy++) {
-//             for (int dz = -1; dz <= 1; dz++) {
-//                 if (dx == 0 && dy == 0 && dz == 0) continue;
-
-//                 int nx = a.x + dx;
-//                 int ny = a.y + dy;
-//                 int nz = a.z + dz;
-
-//                 if (inBounds(nx, ny, nz, Lx, Ly, Lz)) {
-//                     neighbors[count].x = nx;
-//                     neighbors[count].y = ny;
-//                     neighbors[count].z = nz;
-//                     count++;
-//                 }
-//             }
-//         }
-//     }
-//     return count;
-// }
-
-int isNeighbor(Atom a, Atom b, double radius);
+int isNeighbor(Atom a, Atom b);
+Atom* getAtoms(int count);
+Atom** findNeighbors(Atom atoms[], int count);
+int read_csv(const char *filename, Atom **atomsOut, int atomsCount);
 
 int main() {
     int substrateX = 20, substrateY = 20, substrateZ = 10;
     int atomsCount = substrateX * substrateY * substrateZ;
+    atomsCount = 150;
 
     double radius = 2.5;
 
     Atom *atoms;
     // atoms = getAtoms(atomsCount);
+    int realCount = read_csv("atom_positions.csv", &atoms, atomsCount);
     Atom a, b;
     a.x = 0,
     a.y = 0;
@@ -54,56 +36,118 @@ int main() {
     b.y = 0;
     b.z = 1;
 
-    printf("%d\n", isNeighbor(a, b, 2));
+    printf("%d\n", isNeighbor(a, b));
 
-    // int **neighbors = findNeighbors(atoms, atomsCount, radius);
+    Atom** nghbrs;
+    nghbrs = findNeighbors(atoms, atomsCount);
 
-    // for (int i = 0; i < atomsCount; i++) {
-    //     free(neighbors[i]);
-    // }
-    // free(neighbors);
-    // free(atoms);
-
+    for (int i = 0; i < 0; i++) {
+        if (nghbrs[i]->preNeighbors != nghbrs[i]->neighbors) {
+            printf("WARNING: neighbors count for atom with id:%d is not as prepared\n", atoms[i].id);
+        }
+    }
     return 0;
 }
 
-int** findNeighbors(Atom atoms[], int count, double radius) {
+Atom** findNeighbors(Atom atoms[], int count) {
     Atom **neighbors = malloc(count * sizeof(Atom*));
     for (int i = 0; i < count; i++) {
-        neighbors[i] = malloc((count - 1) * sizeof(Atom));
+        neighbors[i] = malloc(neighborsCount * sizeof(Atom));
     }
     
-    // for (int i = 0; i < count; i++) {
-    //     Atom a = atoms[i];
-    //     int n = neighbors(a, gridX, gridY, gridZ, neighbors);
+    for (int i = 0; i < count; i++) {
+        Atom a = atoms[i];
+        int curNeighborsCount = 0;
+        // поиск соседей
+        for (int j = 0; j < count; j++) {
+            if (j == i) {
+                continue;
+            }
+            if (isNeighbor(atoms[i], atoms[j])) {
+                if (curNeighborsCount >= 4) {
+                    printf("WARNING: neighbors count for atom with id:%d is more than 4\n", atoms[i].id);
+                    break;
+                }
+                neighbors[i][curNeighborsCount] = atoms[j];
+                curNeighborsCount++;
+            }
+        }
+        atoms[i].neighbors = curNeighborsCount;
 
-    //     printf("Атом (%d, %d, %d), количество соседей: %d\n", a.x, a.y, a.z, n);
-    //     for (int j = 0; j < n; j++) {
-    //         printf("   -> (%d, %d, %d)\n", neighbors[j].x, neighbors[j].y, neighbors[j].z);
-    //     }
-    // }
+        printf("Атом: %d (%lf, %lf, %lf), количество соседей: %d\n", a.id, a.x, a.y, a.z, curNeighborsCount);
+        for (int j = 0; j < curNeighborsCount; j++) {
+            printf("   -> id:%d (%lf, %lf, %lf)\n",  neighbors[i][j].id, neighbors[i][j].x, neighbors[i][j].y, neighbors[i][j].z);
+        }
+    }
+
+    return neighbors;
 }
 
-int isNeighbor(Atom a, Atom b, double radius) {
+int isNeighbor(Atom a, Atom b) {
     double x = a.x - b.x;
     double y = a.y - b.y;
     double z = a.z - b.z;
     double r = sqrt(x * x + y * y + z * z);
-    if (r <= radius) {
+    // printf("%f\n", r);
+    if (r <= neighborRadius) {
         return 1;
     }
     return 0;
 }
 
 
+int read_csv(const char *filename, Atom **atomsOut, int atomsCount) {
+    FILE *f = fopen(filename, "r");
+    if (!f) {
+        perror("Ошибка открытия файла");
+        return -1;
+    }
 
-// Atom* getAtoms(int count) {
-//     Atom *atoms = malloc(count * sizeof(Atom));
-//     for (int i = 0; i < count; i++) {
-//         atoms[i].id = i;
-//         atoms[i].x = i % 20;
-//         atoms[i].y = i % 20;
-//         atoms[i].z = i % 20;
-//     }
-//     return atoms;
-// }
+    char line[256];
+    int count = 0;
+    Atom *atoms = malloc(atomsCount * sizeof(Atom));
+    if (!atoms) {
+        fclose(f);
+        return -1;
+    }
+
+    if (!fgets(line, sizeof(line), f)) {
+        fclose(f);
+        free(atoms);
+        return -1;
+    }
+    int i = 0;
+    while (fgets(line, sizeof(line), f)) {
+        line[strcspn(line, "\r\n")] = 0;
+
+        Atom a;
+        a.id = i;
+        i++;
+        if (sscanf(line, "%lf,%lf,%lf,%d", &a.x, &a.y, &a.z, &a.preNeighbors) == 4) {
+            if (count >= atomsCount) {
+                atomsCount *= 2;
+                atoms = realloc(atoms, atomsCount * sizeof(Atom));
+                if (!atoms) {
+                    fclose(f);
+                    return -1;
+                }
+            }
+            atoms[count++] = a;
+        }
+    }
+
+    fclose(f);
+    *atomsOut = atoms;
+    return count;
+}
+
+Atom* getAtoms(int count) {
+    Atom *atoms = malloc(count * sizeof(Atom));
+    for (int i = 0; i < count; i++) {
+        atoms[i].id = i;
+        atoms[i].x = i % 20;
+        atoms[i].y = i % 20;
+        atoms[i].z = i % 20;
+    }
+    return atoms;
+}
