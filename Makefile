@@ -3,8 +3,11 @@ TARGETMPI = parallel
 
 GCC = gcc
 MPICC = mpicc
+MPIRUN = mpirun
 
 LIBS = -lm
+
+np = 4
 
 .PHONY: build, run, clean, generate, buildMpi
 
@@ -13,7 +16,7 @@ build: main.c
 
 buildMpi: parallelMpi.c
 	$(MPICC) parallelMpi.c -o $(TARGETMPI)
-	mpirun -np ./(TARGETMPI)
+	$(MPIRUN) -np $(np) ./$(TARGETMPI)
 
 run: build
 	./$(TARGET)
@@ -23,5 +26,7 @@ clean:
 
 generate: generate.c 
 	$(GCC) generate.c -o generate
+help:
+	
 
 .DEFAULT_GOAL := run
