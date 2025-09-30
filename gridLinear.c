@@ -16,7 +16,7 @@ typedef struct {
 typedef struct {
     Atom* atoms;
     int atomsCount;
-    double xAtomsCount, yAtomsCount, zAtomsCount;
+    int xAtomsCount, yAtomsCount, zAtomsCount;
 } GridCell;
 
 typedef struct {
@@ -32,7 +32,7 @@ int isNeighbor(Atom a, Atom b);
 Atom* getAtoms(int count);
 Atom** findNeighbors(Atom atoms[], int count);
 int read_csv(const char *filename, Atom **atomsOut, int atomsCount);
-int selectCell(int atomId, int atomsCount, Grid* grid);
+int selectCell(int atomId, int atomsCount, Grid* grid, GridCell gridCell);
 
 int main() {
     int substrateX = 20, substrateY = 20, substrateZ = 10;
@@ -63,11 +63,16 @@ int main() {
     return 0;
 }
 
-Grid formGrid(Atom* atoms, int atomsCount, Substract substract, int xCells, int yCells, int zCells) {
+Grid formGrid(Atom* atoms, int atomsCount, Substract substract, int xCells, int yCells, int zCells,
+     int xAtoms, int yAtoms, int zAtoms) {
     Grid* grid;
+    GridCell gridCell;
     grid->xCellsCount = xCells;
     grid->yCellsCount = yCells;
     grid->zCellsCount = zCells;
+    gridCell.xAtomsCount = xAtoms;
+    gridCell.yAtomsCount = yAtoms;
+    gridCell.zAtomsCount = zAtoms;
     int cellsCount = xCells * yCells * zCells;
     int atomsPerCell = atomsCount / cellsCount;
     if (atomsCount % cellsCount != 0) {
@@ -75,21 +80,20 @@ Grid formGrid(Atom* atoms, int atomsCount, Substract substract, int xCells, int 
     }
     grid->cells = malloc(xCells * yCells * zCells * sizeof(GridCell));
     for (int i = 0; i < atomsCount; i++) {
-        int cellId = selectCell(i, atomsCount, grid);
+        int cellId = selectCell(i, atomsCount, grid, gridCell);
     }
 }
 
-int selectCell(int atomId, int atomsCount, Grid* grid) {
-    int zLayer = atomId / (grid->xCellsCount * grid->yCellsCount);
-    int cellsCount = grid->xCellsCount * grid->yCellsCount * grid->zCellsCount;
-    int atomsPerCell = atomsCount / cellsCount;
-    int cellId = atomsCount / atomsPerCell;
+int selectCell(int atomId, int atomsCount, Grid* grid, GridCell gridCell) {
+    int xyId = atomId;
+    int zCellLayer = atomId / (gridCell.xAtomsCount * gridCell.yAtomsCount * grid->zCellsCount);
+    int atomIdInLayerXY = atomId - atomId / (gridCell.xAtomsCount);
+    int xCellLineInLayer = (atomIdInLayerXY / gridCell.xAtomsCount) % grid->xCellsCount;
+    int yCellLineInLayer = (atomIdInLayerXY / (gridCell.xAtomsCount * grid->xCellsCount * grid->yCellsCount));
 
+    int cellId = xCellLineInLayer + yCellLineInLayer * grid->xCellsCount + zCellLayer * grid->xCellsCount * grid->yCellsCount;
 
-
-    int xGrid = atomId / grid->xCellsCount;
-
-    // if (atomId)
+    return cellId;
 }
 
 Atom** findNeighbors(Atom atoms[], int count) {
