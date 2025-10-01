@@ -9,7 +9,7 @@ LIBS = -lm
 
 np = 4
 
-.PHONY: build, run, clean, generate, buildMpi
+.PHONY: build, run, clean, generate, buildMpi, buildLinear
 
 build: main.c
 	$(GCC) main.c -o $(TARGET) $(LIBS)
@@ -17,6 +17,9 @@ build: main.c
 buildMpi: parallelMpi.c
 	$(MPICC) parallelMpi.c -o $(TARGETMPI)
 	$(MPIRUN) -np $(np) ./$(TARGETMPI)
+buildLinear: gridLinear.c
+	$(GCC) gridLinear.c -o gridLinear $(LIBS)
+	./gridLinear
 
 run: build
 	./$(TARGET)

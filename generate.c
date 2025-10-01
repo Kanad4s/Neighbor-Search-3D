@@ -79,8 +79,7 @@ int generate_atoms(int N, double L, double min_dist, double cutoff, Atom *atoms)
 int main() {
     srand((unsigned)time(NULL));
 
-    // === ТУТ меняешь параметры ===
-    int N = 150;             // число атомов
+    int N = 240;             // число атомов
     double L = 20.0;         // размер куба
     double min_dist = 2.1;   // минимальное расстояние
     double cutoff = 2.5;     // радиус соседства
