@@ -58,16 +58,15 @@ int main() {
 
     int xCells = 2;
     int yCells = 2;
-    int zCells = 5;
+    int zCells = 2;
 
-    Atom *atoms;
+    Atom* atoms;
     // atoms = getAtoms(atomsCount);
     int realCount = read_csv("atom_positions_48.csv", &atoms, atomsCount);
     if (realCount != atomsCount) {
         printf("atoms in file is not the same as predicted\n");
         printf("in file: %d, predicted: %d\n", realCount, atomsCount);
     }
-
     Grid* grid = formGrid(atoms, atomsCount, substruct, xCells, yCells, zCells, atomsX, atomsY, atomsZ);
     // printGrid(grid);
     // Atom** nghbrs;
@@ -83,7 +82,7 @@ int main() {
 
 Grid* formGrid(Atom* atoms, int atomsCount, Substract substract, int xCells, int yCells, int zCells,
      int xAtoms, int yAtoms, int zAtoms) {
-    Grid* grid;
+    Grid* grid = malloc(sizeof(Grid));
     GridCell gridCell;
     grid->xCellsCount = xCells;
     grid->yCellsCount = yCells;
@@ -97,12 +96,16 @@ Grid* formGrid(Atom* atoms, int atomsCount, Substract substract, int xCells, int
     if (atomsCount % cellsCount != 0) {
         printf("WARNING: atomsCount %% cellsCount != 0");
     }
-    grid->cells = calloc(xCells * yCells * zCells, sizeof(GridCell));
+    printf("start form grid\n");
+    grid->cells = malloc(xCells * yCells * zCells * sizeof(GridCell));
+    // grid->cells = calloc(xCells * yCells * zCells, sizeof(GridCell));
     for (int i = 0; i < atomsCount; i++) {
+        grid->cells->atoms = malloc(atomsCount * sizeof(int));
         int cellId = selectCell(i, atomsCount, grid, gridCell);
-        int curAtomsCount = grid->cells[cellId].atomsCount;
-        grid->cells[cellId].atoms[curAtomsCount] = atoms[i];
-        grid->cells[cellId].atomsCount++;
+        printf("selected cell: %d for atom: %d\n", cellId, i);
+        // int curAtomsCount = grid->cells[cellId].atomsCount;
+        // grid->cells[cellId].atoms[curAtomsCount] = atoms[i];
+        // grid->cells[cellId].atomsCount++;
     }
     return grid;
 }
