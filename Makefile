@@ -1,5 +1,7 @@
 TARGET = main
 TARGETMPI = parallel
+TARGETLINEAR = gridLinear
+TARGETGENERATE = generate
 
 GCC = gcc
 MPICC = mpicc
@@ -17,8 +19,9 @@ build: main.c
 buildMpi: parallelMpi.c
 	$(MPICC) parallelMpi.c -o $(TARGETMPI)
 	$(MPIRUN) -np $(np) ./$(TARGETMPI)
+
 buildLinear: gridLinear.c
-	$(GCC) gridLinear.c -o gridLinear $(LIBS)
+	$(GCC) gridLinear.c -o $(TARGETLINEAR) $(LIBS)
 	./gridLinear
 
 run: build
@@ -26,10 +29,18 @@ run: build
 
 clean:
 	rm -rf $(TARGET)
+	rm -rf $(TARGETMPI)
+	rm -rf $(TARGETLINEAR)
+	rm -rf $(TARGETGENERATE)
 
 generate: generate.c 
-	$(GCC) generate.c -o generate
+	$(GCC) generate.c -o $(TARGETGENERATE)
 help:
-	
+	@echo "build"
+	@echo "buildMpi"
+	@echo "buildLinear" 
+	@echo "run"
+	@echo "clean"
+	@echo "generate"
 
-.DEFAULT_GOAL := run
+.DEFAULT_GOAL := help

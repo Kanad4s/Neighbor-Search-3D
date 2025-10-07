@@ -40,11 +40,14 @@ void findNeighborsInCell(Grid* grid, GridCell* cell, int cellId, Atom* neighbors
 void findNeighborsInNearCells(Grid* grid, int cellId, Atom* atom, Atom* neighbors[], int* curNeighbors);
 int getNearCells(Grid* grid, int cellId, int cellNeighbors[]);
 int xyzToId(int x, int y, int z, int Nx, int Ny, int Nz);
+void printGrid(Grid* grid);
+void printCell(GridCell cell, int x, int y, int z, int id);
+void printAtom(Atom atom);
 
 int main() {
-    int atomsX = 6, atomsY = 4, atomsZ = 10;
+    int atomsX = 6, atomsY = 4, atomsZ = 4;
     int atomsCount = atomsX * atomsY * atomsZ;
-    atomsCount = 240;
+    atomsCount = 48;
 
     double radius = 2.5;
 
@@ -59,21 +62,22 @@ int main() {
 
     Atom *atoms;
     // atoms = getAtoms(atomsCount);
-    int realCount = read_csv("atom_positions.csv", &atoms, atomsCount);
+    int realCount = read_csv("atom_positions_48.csv", &atoms, atomsCount);
     if (realCount != atomsCount) {
         printf("atoms in file is not the same as predicted\n");
         printf("in file: %d, predicted: %d\n", realCount, atomsCount);
     }
 
     Grid* grid = formGrid(atoms, atomsCount, substruct, xCells, yCells, zCells, atomsX, atomsY, atomsZ);
-    Atom** nghbrs;
-    nghbrs = findNeighbors(grid);
+    // printGrid(grid);
+    // Atom** nghbrs;
+    // nghbrs = findNeighbors(grid);
 
-    for (int i = 0; i < 0; i++) {
-        if (nghbrs[i]->preNeighbors != nghbrs[i]->neighbors) {
-            printf("WARNING: neighbors count for atom with id:%d is not as prepared\n", atoms[i].id);
-        }
-    }
+    // for (int i = 0; i < 0; i++) {
+    //     if (nghbrs[i]->preNeighbors != nghbrs[i]->neighbors) {
+    //         printf("WARNING: neighbors count for atom with id:%d is not as prepared\n", atoms[i].id);
+    //     }
+    // }
     return 0;
 }
 
@@ -256,4 +260,27 @@ Atom* getAtoms(int count) {
         atoms[i].z = i % 20;
     }
     return atoms;
+}
+
+void printGrid(Grid* grid) {
+    for (int x = 0; x < grid->xCellsCount; x++) {
+        for (int y = 0; y < grid->yCellsCount; y++) {
+            for (int z = 0; z < grid->zCellsCount; z++) {
+                int id = xyzToId(x, y, z, grid->xCellsCount, grid->yCellsCount, grid->zCellsCount);
+                printCell(grid->cells[id], x, y, z, id);
+            }
+        }
+    }
+}
+
+void printCell(GridCell cell, int x, int y, int z, int id) {
+    printf("Cell: %d, x: %d, y: %d, z: %d\nAtoms\n:", id, x, y, z);
+    for (int i = 0; i < cell.atomsCount; i++) {
+        printf("Atom id in cell: %d", i);
+        printAtom(cell.atoms[i]);
+    }
+}
+
+void printAtom(Atom atom) {
+    printf("Atom: %d, x: %lf, y: %lf, z: %lf\n", atom.id, atom.x, atom.y, atom.z);
 }
