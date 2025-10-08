@@ -33,7 +33,7 @@ int isNeighbor(Atom a, Atom b);
 Atom* getAtoms(int count);
 Atom** findNeighbors(Grid* grid);
 int read_csv(const char *filename, Atom **atomsOut, int atomsCount);
-int selectCell(int atomId, int atomsCount, Grid* grid, GridCell gridCell);
+int selectCell(int atomId, Grid* grid, GridCell gridCell);
 Grid* formGrid(Atom* atoms, int atomsCount, Substract substract, int xCells, int yCells, int zCells,
      int xAtoms, int yAtoms, int zAtoms);
 void findNeighborsInCell(Grid* grid, GridCell* cell, int cellId, Atom* neighbors[]);
@@ -47,7 +47,7 @@ void printAtom(Atom atom);
 int main() {
     int atomsX = 6, atomsY = 4, atomsZ = 4;
     int atomsCount = atomsX * atomsY * atomsZ;
-    atomsCount = 48;
+    // atomsCount = 96;
 
     double radius = 2.5;
 
@@ -59,7 +59,8 @@ int main() {
     int xCells = 2;
     int yCells = 2;
     int zCells = 2;
-
+    printf("Atoms: %d, cells: %d\n", atomsCount, xCells * yCells * zCells);
+    // printf("Atoms per cell: %d\n", atomsCount / (xCells * yCells * zCells));
     Atom* atoms;
     // atoms = getAtoms(atomsCount);
     int realCount = read_csv("atom_positions_48.csv", &atoms, atomsCount);
@@ -93,24 +94,44 @@ Grid* formGrid(Atom* atoms, int atomsCount, Substract substract, int xCells, int
     gridCell.zAtomsCount = zAtoms;
     int cellsCount = xCells * yCells * zCells;
     int atomsPerCell = atomsCount / cellsCount;
+    printf("Atoms per cell: %d\n", atomsPerCell);
     if (atomsCount % cellsCount != 0) {
         printf("WARNING: atomsCount %% cellsCount != 0");
     }
-    printf("start form grid\n");
     grid->cells = malloc(xCells * yCells * zCells * sizeof(GridCell));
+    for (int i = 0; i < cellsCount; i++) {
+        grid->cells[i].atomsCount = 0;
+        grid->cells[i].atoms = (Atom*)malloc(atomsPerCell * sizeof(Atom));
+    }
     // grid->cells = calloc(xCells * yCells * zCells, sizeof(GridCell));
+    int* cellsChosen = calloc(cellsCount, sizeof(int));
     for (int i = 0; i < atomsCount; i++) {
-        grid->cells->atoms = malloc(atomsCount * sizeof(int));
-        int cellId = selectCell(i, atomsCount, grid, gridCell);
-        printf("selected cell: %d for atom: %d\n", cellId, i);
-        // int curAtomsCount = grid->cells[cellId].atomsCount;
-        // grid->cells[cellId].atoms[curAtomsCount] = atoms[i];
-        // grid->cells[cellId].atomsCount++;
+        int cellId = selectCell(i, grid, gridCell);
+        cellsChosen[cellId]++;
+        // printf("selected cell: %d for atom: %d\n", cellId, i);
+        int curAtomsCount = grid->cells[cellId].atomsCount;
+        // printf("%d, %d, %d, %d", atoms[i].id, atoms[i].x, atoms[i].y, atoms[i].z);
+        grid->cells[cellId].atoms[curAtomsCount] = atoms[i];
+        grid->cells[cellId].atomsCount = curAtomsCount + 1;
+        // printf("Atom id: %d\n", grid->cells[cellId].atoms[curAtomsCount].id);
+    }
+
+    for (int i = 0; i < cellsCount; i++) {
+        printf("Cell %d has %d atoms, in Grid structure:%d\n", i, cellsChosen[i], grid->cells[i].atomsCount);
     }
     return grid;
 }
 
-int selectCell(int atomId, int atomsCount, Grid* grid, GridCell gridCell) {
+void idToXyz(int id, int Nx, int Ny, int Nz, int *x, int *y, int *z) {
+    *z = id / (Nx * Ny);
+    int rem = id % (Nx * Ny);
+    *y = rem / Nx;
+    *x = rem % Nx;
+}
+
+
+int selectCell(int atomId, Grid* grid, GridCell gridCell) {
+    
     int xyId = atomId;
     int zCellLayer = atomId / (gridCell.xAtomsCount * gridCell.yAtomsCount * grid->zCellsCount);
     int atomIdInLayerXY = atomId - atomId / (gridCell.xAtomsCount);
@@ -277,13 +298,12 @@ void printGrid(Grid* grid) {
 }
 
 void printCell(GridCell cell, int x, int y, int z, int id) {
-    printf("Cell: %d, x: %d, y: %d, z: %d\nAtoms\n:", id, x, y, z);
+    printf("Cell: %d, x: %d, y: %d, z: %d\nAtoms:\n", id, x, y, z);
     for (int i = 0; i < cell.atomsCount; i++) {
-        printf("Atom id in cell: %d", i);
         printAtom(cell.atoms[i]);
     }
 }
 
 void printAtom(Atom atom) {
-    printf("Atom: %d, x: %lf, y: %lf, z: %lf\n", atom.id, atom.x, atom.y, atom.z);
+    printf("\tAtom: %d, x: %lf, y: %lf, z: %lf\n", atom.id, atom.x, atom.y, atom.z);
 }
