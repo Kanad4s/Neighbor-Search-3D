@@ -20,7 +20,7 @@ buildMpi: parallelMpi.c
 	$(MPICC) parallelMpi.c -o $(TARGETMPI)
 	$(MPIRUN) -np $(np) ./$(TARGETMPI)
 
-buildLinear: gridLinear.c
+buildLinear: gridLinear.c clean
 	$(GCC) gridLinear.c -o $(TARGETLINEAR) $(LIBS)
 	./gridLinear
 

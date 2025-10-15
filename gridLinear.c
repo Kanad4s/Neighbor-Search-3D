@@ -63,7 +63,7 @@ int main() {
     // printf("Atoms per cell: %d\n", atomsCount / (xCells * yCells * zCells));
     Atom* atoms;
     // atoms = getAtoms(atomsCount);
-    int realCount = read_csv("atom_positions_48.csv", &atoms, atomsCount);
+    int realCount = read_csv("atom_positions_96.csv", &atoms, atomsCount);
     if (realCount != atomsCount) {
         printf("atoms in file is not the same as predicted\n");
         printf("in file: %d, predicted: %d\n", realCount, atomsCount);
@@ -89,9 +89,9 @@ Grid* formGrid(Atom* atoms, int atomsCount, Substract substract, int xCells, int
     grid->yCellsCount = yCells;
     grid->zCellsCount = zCells;
     grid->atomsCount = atomsCount;
-    gridCell.xAtomsCount = xAtoms;
-    gridCell.yAtomsCount = yAtoms;
-    gridCell.zAtomsCount = zAtoms;
+    gridCell.xAtomsCount = xAtoms / xCells;
+    gridCell.yAtomsCount = yAtoms / yCells;
+    gridCell.zAtomsCount = zAtoms / zCells;
     int cellsCount = xCells * yCells * zCells;
     int atomsPerCell = atomsCount / cellsCount;
     printf("Atoms per cell: %d\n", atomsPerCell);
@@ -103,19 +103,21 @@ Grid* formGrid(Atom* atoms, int atomsCount, Substract substract, int xCells, int
         grid->cells[i].atomsCount = 0;
         grid->cells[i].atoms = (Atom*)malloc(atomsPerCell * sizeof(Atom));
     }
+    printf("Start form grid\n");
     // grid->cells = calloc(xCells * yCells * zCells, sizeof(GridCell));
     int* cellsChosen = calloc(cellsCount, sizeof(int));
     for (int i = 0; i < atomsCount; i++) {
         int cellId = selectCell(i, grid, gridCell);
+        printf("selected cell: %d for atom: %d\n", cellId, i);
+        // sleep(1);
         cellsChosen[cellId]++;
-        // printf("selected cell: %d for atom: %d\n", cellId, i);
         int curAtomsCount = grid->cells[cellId].atomsCount;
         // printf("%d, %d, %d, %d", atoms[i].id, atoms[i].x, atoms[i].y, atoms[i].z);
         grid->cells[cellId].atoms[curAtomsCount] = atoms[i];
         grid->cells[cellId].atomsCount = curAtomsCount + 1;
         // printf("Atom id: %d\n", grid->cells[cellId].atoms[curAtomsCount].id);
     }
-
+    printf("Finish form grid\n");
     for (int i = 0; i < cellsCount; i++) {
         printf("Cell %d has %d atoms, in Grid structure:%d\n", i, cellsChosen[i], grid->cells[i].atomsCount);
     }
@@ -131,12 +133,12 @@ void idToXyz(int id, int Nx, int Ny, int Nz, int *x, int *y, int *z) {
 
 
 int selectCell(int atomId, Grid* grid, GridCell gridCell) {
-    
-    int xyId = atomId;
-    int zCellLayer = atomId / (gridCell.xAtomsCount * gridCell.yAtomsCount * grid->zCellsCount);
-    int atomIdInLayerXY = atomId - atomId / (gridCell.xAtomsCount);
+    int zCellLayer = atomId / (gridCell.xAtomsCount * grid->xCellsCount * gridCell.yAtomsCount * grid->yCellsCount * gridCell.zAtomsCount);
+
+    int atomIdInLayerXY = atomId % (gridCell.xAtomsCount * grid->xCellsCount * gridCell.yAtomsCount * grid->yCellsCount);
+
     int xCellLineInLayer = (atomIdInLayerXY / gridCell.xAtomsCount) % grid->xCellsCount;
-    int yCellLineInLayer = (atomIdInLayerXY / (gridCell.xAtomsCount * grid->xCellsCount * grid->yCellsCount));
+    int yCellLineInLayer = (atomIdInLayerXY / (gridCell.xAtomsCount * grid->xCellsCount * gridCell.yAtomsCount)) % grid->yCellsCount;
 
     int cellId = xCellLineInLayer + yCellLineInLayer * grid->xCellsCount + zCellLayer * grid->xCellsCount * grid->yCellsCount;
 
