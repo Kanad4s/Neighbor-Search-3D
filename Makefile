@@ -1,6 +1,6 @@
-TARGET = main
+TARGETLINEAR = main
 TARGETMPI = parallel
-TARGETLINEAR = gridLinear
+TARGETCELLS = gridLinear
 TARGETGENERATE = generate
 
 GCC = gcc
@@ -13,24 +13,37 @@ np = 4
 
 .PHONY: build, run, clean, generate, buildMpi, buildLinear
 
-build: main.c
-	$(GCC) main.c -o $(TARGET) $(LIBS)
+cleanLinear:
+	rm -rf  $(TARGETLINEAR)
 
-buildMpi: parallelMpi.c
+buildLinear: cleanLinear main.c
+	$(GCC) main.c -o $(TARGETLINEAR) $(LIBS)
+
+runLinear: buildLinear
+	./$(TARGETLINEAR)
+
+cleanCells:
+	rm -rf $(TARGETCELLS)
+
+buildCells: cleanCells gridLinear.c
+	$(GCC) gridLinear.c -o $(TARGETCELLS) $(LIBS)
+
+runCells:
+	./$(TARGETCELLS)
+
+cleanMpi: 
+	rm -rf $(TARGETMPI)
+
+buildMpi: cleanMpi parallelMpi.c
 	$(MPICC) parallelMpi.c -o $(TARGETMPI)
+	
+runMpi: buildMpi
 	$(MPIRUN) -np $(np) ./$(TARGETMPI)
 
-buildLinear: gridLinear.c clean
-	$(GCC) gridLinear.c -o $(TARGETLINEAR) $(LIBS)
-	./gridLinear
-
-run: build
-	./$(TARGET)
-
 clean:
-	rm -rf $(TARGET)
-	rm -rf $(TARGETMPI)
 	rm -rf $(TARGETLINEAR)
+	rm -rf $(TARGETMPI)
+	rm -rf $(TARGETCELLS)
 	rm -rf $(TARGETGENERATE)
 
 generate: generate.c 
