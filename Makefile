@@ -1,6 +1,6 @@
-TARGETLINEAR = main
-TARGETMPI = parallel
-TARGETCELLS = gridLinear
+TARGETLINEAR = linear
+TARGETMPI = mpi
+TARGETCELLS = cells
 TARGETGENERATE = generate
 
 GCC = gcc

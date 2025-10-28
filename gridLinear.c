@@ -37,7 +37,7 @@ Atom** findNeighbors(Grid* grid);
 int read_csv(const char *filename, Atom **atomsOut, int atomsCount);
 int read_cls(const char *filename, Atom **atomsOut, int atomsCount);
 int selectCell(int atomId, Grid* grid, GridCell gridCell);
-Grid* formGrid(Atom* atoms, int atomsCount, Substract substract, int xCells, int yCells, int zCells,
+Grid* formGrid(Atom* atoms, int atomsCount, int xCells, int yCells, int zCells,
      int xAtoms, int yAtoms, int zAtoms);
 void findNeighborsInCell(Grid* grid, GridCell* cell, int cellId, Atom* neighbors[]);
 void findNeighborsInNearCells(Grid* grid, int cellId, Atom* atom, Atom* neighbors[], int* curNeighbors);
@@ -48,49 +48,43 @@ void printCell(GridCell cell, int x, int y, int z, int id);
 void printAtom(Atom atom);
 
 int main() {
-    int atomsX = 20, atomsY = 10, atomsZ = 50;
-    int atomsCount = atomsX * atomsY * atomsZ;
-    // atomsCount = 96;
+    // размеры подложки в атомах
+    int atomsX = 68, atomsY = 68, atomsZ = 4;
+    // int atomsCount = atomsX * atomsY * atomsZ;
+    int atomsCount = 18496;
 
-    double radius = 2.5;
-
-    Substract substruct;
-    substruct.x = 20;
-    substruct.y = 20;
-    substruct.z = 10;
-
-    int xCells = 2;
-    int yCells = 2;
+    int xCells = 17;
+    int yCells = 17;
     int zCells = 2;
     printf("Atoms: %d, cells: %d\n", atomsCount, xCells * yCells * zCells);
     Atom* atoms;
     // int realCount = read_csv("atom_positions_96.csv", &atoms, atomsCount);
     int realCount = read_cls("mdf_18000.cls", &atoms, atomsCount);
     if (realCount != atomsCount) {
-        printf("WARNING: atoms count in file %d != %d atoms expected\n", realCount, atomsCount);
-        return 0; 
+        // printf("WARNING: atoms count in file %d != %d atoms expected\n", realCount, atomsCount);
+        // return 0; 
     }
-    if (realCount != atomsCount) {
-        printf("atoms in file is not the same as predicted\n");
-        printf("in file: %d, predicted: %d\n", realCount, atomsCount);
-    }
-    Grid* grid = formGrid(atoms, atomsCount, substruct, xCells, yCells, zCells, atomsX, atomsY, atomsZ);
-    // printGrid(grid);
-    Atom** nghbrs;
-    nghbrs = findNeighbors(grid);
+    Grid* grid = formGrid(atoms, atomsCount, xCells, yCells, zCells, atomsX, atomsY, atomsZ);
+
+    Atom** neighbors;
+    neighbors = findNeighbors(grid);
 
     for (int i = 0; i < 0; i++) {
-        if (nghbrs[i]->preNeighbors != nghbrs[i]->neighbors) {
+        if (neighbors[i]->preNeighbors != neighbors[i]->neighbors) {
             printf("WARNING: neighbors count for atom with id:%d is not as prepared\n", atoms[i].id);
         }
     }
     return 0;
 }
 
-Grid* formGrid(Atom* atoms, int atomsCount, Substract substract, int xCells, int yCells, int zCells,
+Grid* formGrid(Atom* atoms, int atomsCount, int xCells, int yCells, int zCells,
      int xAtoms, int yAtoms, int zAtoms) {
     Grid* grid = malloc(sizeof(Grid));
     GridCell gridCell;
+    int cellsCount = xCells * yCells * zCells;
+    int atomsPerCell = atomsCount / cellsCount;
+    printf("Cells: %d\n", cellsCount);
+    printf("Atoms per cell: %d\n", atomsPerCell);
     grid->xCellsCount = xCells;
     grid->yCellsCount = yCells;
     grid->zCellsCount = zCells;
@@ -98,11 +92,10 @@ Grid* formGrid(Atom* atoms, int atomsCount, Substract substract, int xCells, int
     gridCell.xAtomsCount = xAtoms / xCells;
     gridCell.yAtomsCount = yAtoms / yCells;
     gridCell.zAtomsCount = zAtoms / zCells;
-    int cellsCount = xCells * yCells * zCells;
-    int atomsPerCell = atomsCount / cellsCount;
-    printf("Atoms per cell: %d\n", atomsPerCell);
     if (atomsCount % cellsCount != 0) {
-        printf("WARNING: atomsCount %% cellsCount != 0");
+        printf("WARNING: atomsCount %% cellsCount == %d != 0\n", atomsCount % cellsCount);
+        atomsPerCell++;
+        printf("Updated atoms per cell: %d\n", atomsPerCell);
     }
     grid->cells = malloc(xCells * yCells * zCells * sizeof(GridCell));
     for (int i = 0; i < cellsCount; i++) {
@@ -120,15 +113,15 @@ Grid* formGrid(Atom* atoms, int atomsCount, Substract substract, int xCells, int
         grid->cells[cellId].atomsCount = curAtomsCount + 1;
     }
     printf("Finish form grid\n");
-    for (int i = 0; i < cellsCount; i++) {
-        printf("Cell %d has %d atoms, in Grid have to be: %d\n", i, cellsChosen[i], grid->cells[i].atomsCount);
-    }
+    // for (int i = 0; i < cellsCount; i++) {
+    //     printf("Cell %d has %d atoms, in Grid have to be: %d\n", i, cellsChosen[i], grid->cells[i].atomsCount);
+    // }
     return grid;
 }
 
 int selectCell(int atomId, Grid* grid, GridCell gridCell) {
     int zCellLayer = atomId / (gridCell.xAtomsCount * grid->xCellsCount * gridCell.yAtomsCount * grid->yCellsCount * gridCell.zAtomsCount);
-
+    
     int atomIdInLayerXY = atomId % (gridCell.xAtomsCount * grid->xCellsCount * gridCell.yAtomsCount * grid->yCellsCount);
 
     int xCellLineInLayer = (atomIdInLayerXY / gridCell.xAtomsCount) % grid->xCellsCount;
@@ -139,7 +132,6 @@ int selectCell(int atomId, Grid* grid, GridCell gridCell) {
     return cellId;
 }
 
-// TODO
 Atom** findNeighbors(Grid* grid) {
     Atom **neighbors = malloc(grid->atomsCount * sizeof(Atom*));
     for (int i = 0; i < grid->atomsCount; i++) {
@@ -187,7 +179,7 @@ int getNearCellsIDs(Grid* grid, int cellId, int cellNeighborsIDS[]) {
     int xyLayerPos = cellId % (grid->xCellsCount * grid->yCellsCount);
     int y = xyLayerPos / grid->xCellsCount;
     int x = xyLayerPos % grid->xCellsCount;
-    printf("cell id: %d, coords: x - %d, y - %d, z - %d", cellId, x, y, z);
+    // printf("cell id: %d, coords: x - %d, y - %d, z - %d", cellId, x, y, z);
     for (int dx = -1; dx <= 1; dx++) {
         for (int dy = -1; dy <= 1; dy++) {
             for (int dz = -1; dz <= 1; dz++) {
