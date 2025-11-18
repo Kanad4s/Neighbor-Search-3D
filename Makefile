@@ -3,6 +3,8 @@ TARGETMPI = mpi
 TARGETCELLS = cells
 TARGETGENERATE = generate
 
+FILE ?= mdf.cls
+
 GCC = gcc
 MPICC = mpicc
 MPIRUN = mpirun
@@ -20,7 +22,7 @@ buildLinear: cleanLinear main.c
 	$(GCC) main.c -o $(TARGETLINEAR) $(LIBS)
 
 runLinear: buildLinear
-	./$(TARGETLINEAR)
+	./$(TARGETLINEAR) $(FILE)
 
 cleanCells:
 	rm -rf $(TARGETCELLS)
@@ -28,8 +30,8 @@ cleanCells:
 buildCells: cleanCells gridLinear.c
 	$(GCC) gridLinear.c -o $(TARGETCELLS) $(LIBS)
 
-runCells:
-	./$(TARGETCELLS)
+runCells: buildCells
+	./$(TARGETCELLS) $(FILE)
 
 cleanMpi: 
 	rm -rf $(TARGETMPI)
@@ -38,7 +40,7 @@ buildMpi: cleanMpi parallelMpi.c
 	$(MPICC) parallelMpi.c -o $(TARGETMPI)
 	
 runMpi: buildMpi
-	$(MPIRUN) -np $(np) ./$(TARGETMPI)
+	$(MPIRUN) -np $(np) ./$(TARGETMPI) $(FILE)
 
 clean:
 	rm -rf $(TARGETLINEAR)
