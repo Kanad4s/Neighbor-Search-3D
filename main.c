@@ -3,22 +3,14 @@
 #include <math.h>
 #include <string.h>
 #include <ctype.h>
+#include "utils.h"
 
 const int NEIGHBORS_COUNT = 4;
 const double NEIGHBOR_RADIUS = 2.5;
 
-typedef struct {
-    int id;
-    double x, y, z;
-    int neighbors;
-    int preNeighbors;
-} Atom;
-
 int isNeighbor(Atom a, Atom b);
 Atom* getAtoms(int count);
 void findNeighbors(Atom *atoms, int count, Atom **neighbors);
-int read_csv(const char *filename, Atom **atomsOut, int atomsCount);
-void writeFile(Atom** neighbors, int atomsCount);
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
@@ -46,6 +38,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < realCount; i++) {
         for (int j = 0; j < NEIGHBORS_COUNT; j++) {
             if (neighbors[i][j].id != 0) {
+
             } else {
                 // printf("atom with index %d is null\n", i);
             }
@@ -54,7 +47,7 @@ int main(int argc, char *argv[]) {
     }
     printf("count: %d\n", count);
 
-    writeFile(neighbors, realCount);
+    writeFile(atoms, neighbors, realCount);
     return 0;
 }
 
@@ -93,72 +86,3 @@ int isNeighbor(Atom a, Atom b) {
 }
 
 
-int read_csv(const char *filename, Atom **atomsOut, int atomsCount) {
-    FILE *f = fopen(filename, "r");
-    if (!f) {
-        perror("Ошибка открытия файла");
-        return -1;
-    }
-
-    char line[256];
-    int count = 0;
-    Atom *atoms = malloc(atomsCount * sizeof(Atom));
-    if (!atoms) {
-        fclose(f);
-        return -1;
-    }
-
-    for (int i = 0; i < 3; i++) {
-        fgets(line, sizeof(line), f);
-        printf("%s\n", line);
-        
-    }
-
-    while (fgets(line, sizeof(line), f)) {
-        Atom a;
-        a.id = count;
-
-        int n = sscanf(line, "%lf %lf %lf", &a.x, &a.y, &a.z);
-        if (n == 3) {
-            if (count >= atomsCount) {
-                atomsCount *= 2;
-                Atom *tmp = realloc(atoms, atomsCount * sizeof(Atom));
-                if (!tmp) {
-                    free(atoms);
-                    fclose(f);
-                    return -1;
-                }
-                atoms = tmp;
-            }
-            atoms[count] = a;
-            count++;
-        }
-    }
-
-    fclose(f);
-    *atomsOut = atoms;
-    return count;
-}
-
-void writeFile(Atom** neighbors, int atomsCount) {
-    FILE *f = fopen("linearFinal.csv", "w");
-    if (!f) {
-        perror("Ошибка открытия файла");
-        return;
-    }
-
-    fprintf(f, "id,x,y,z,neighbors\n");
-    for (int i = 0; i < atomsCount; i++) {
-        if (neighbors[i]->id > atomsCount || (neighbors[i]->x == 0.0 && neighbors[i]->y == 0.0 && neighbors[i]->z == 0.0)) {
-            continue;
-        }
-        fprintf(f, "%d,%.6f,%.6f,%.6f,%d\n",
-                neighbors[i]->id,
-                neighbors[i]->x,
-                neighbors[i]->y,
-                neighbors[i]->z,
-                neighbors[i]->neighbors);
-    }
-
-    fclose(f);
-}
