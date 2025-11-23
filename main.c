@@ -7,6 +7,7 @@
 
 const int NEIGHBORS_COUNT = 4;
 const double NEIGHBOR_RADIUS = 2.5;
+const char *WRITE_FILE_NAME = "linear.csv";
 
 int isNeighbor(Atom a, Atom b);
 Atom* getAtoms(int count);
@@ -47,7 +48,7 @@ int main(int argc, char *argv[]) {
     }
     printf("count: %d\n", count);
 
-    writeFile(atoms, neighbors, realCount);
+    writeFile(atoms, neighbors, realCount, WRITE_FILE_NAME);
     return 0;
 }
 

@@ -4,9 +4,10 @@
 #include <string.h>
 #include <ctype.h>
 #include "utils.h"
+#include <string.h>
 
-void writeFile(Atom* atoms, Atom** neighbors, int atomsCount) {
-    FILE *f = fopen("linearFinal.csv", "w");
+void writeFile(Atom* atoms, Atom** neighbors, int atomsCount, char *filename) {
+    FILE *f = fopen(filename, "w");
     if (!f) {
         perror("Ошибка открытия файла");
         return;
@@ -55,6 +56,12 @@ int read_cls(const char *filename, Atom **atomsOut, int atomsCount, int cellsCou
         return -1;
     }
 
+     for (int i = 0; i < 3; i++) {
+        fgets(line, sizeof(line), f);
+        printf("%s\n", line);
+        
+    }
+
     while (fgets(line, sizeof(line), f)) {
         int has_digit = 0;
         for (int j = 0; line[j]; j++) {
@@ -68,7 +75,7 @@ int read_cls(const char *filename, Atom **atomsOut, int atomsCount, int cellsCou
 
         Atom a;
         a.id = count;
-        usleep(atomsCount / 200 + cellsCount / 20);
+        // usleep(atomsCount / 200 + cellsCount / 20);
 
         int n = sscanf(line, "%lf %lf %lf", &a.x, &a.y, &a.z);
         if (n == 3) {

@@ -4,17 +4,17 @@
 #include <string.h>
 #include <ctype.h>
 #include <unistd.h>
+#include "utils.h"
 
 const int NEIGHBORS_COUNT_MAX = 4;
 const double NEIGHBOR_RADIUS = 2.5;
 const int MAX_CELL_NEIGHBORS_COUNT = 26;
+const char *WRITE_FILE_NAME = "grisLinear.csv";
 
 typedef struct {
-    int id;
-    double x, y, z;
-    int neighbors;
-    int preNeighbors;
-} Atom;
+    int *ids;
+    int count;
+} NeighborList;
 
 typedef struct {
     Atom* atoms;
@@ -34,26 +34,23 @@ typedef struct {
 
 int isNeighbor(Atom a, Atom b);
 Atom* getAtoms(int count);
-Atom** findNeighbors(Grid* grid);
-int read_csv(const char *filename, Atom **atomsOut, int atomsCount);
-int read_cls(const char *filename, Atom **atomsOut, int atomsCount, int cellsCount);
+NeighborList* findNeighbors(Grid* grid);
 int selectCell(int atomId, Grid* grid, GridCell gridCell);
 Grid* formGrid(Atom* atoms, int atomsCount, int xCells, int yCells, int zCells,
      int xAtoms, int yAtoms, int zAtoms);
-void findNeighborsInCell(Grid* grid, GridCell* cell, int cellId, Atom** neighbors);
-int findNeighborsInNearCells(Grid* grid, int cellId, Atom* atom, Atom* neighbors[], int curNeighbors);
-int getNearCellsIDs(Grid* grid, int cellId, int cellNeighbors[]);
+void findNeighborsInCell(Grid* grid, GridCell* cell, int cellId, NeighborList* neighbors);
+void findNeighborsInNearCells(Grid* grid, int cellId, Atom atom, NeighborList *neighbors);
+int getNearCellsIDs(Grid* grid, int cellId, int *cellNeighbors);
 int convertCellCoordsToId(int x, int y, int z, int Nx, int Ny, int Nz);
 void printGrid(Grid* grid);
 void printCell(GridCell cell, int x, int y, int z, int id);
 void printAtom(Atom atom);
-void writeFile(Atom** neighbors, int atomsCount);
 
 int main() {
     // размеры подложки в атомах
     int atomsX = 68, atomsY = 68, atomsZ = 4;
     // int atomsCount = atomsX * atomsY * atomsZ;
-    int atomsCount = 18496;
+    int atomsCount = 18390;
 
     int cellsX = 17;
     int cellsY = 17;
@@ -63,13 +60,11 @@ int main() {
     Atom* atoms;
     int realCount = read_cls("mdf.cls", &atoms, atomsCount, cellsCount);
     if (realCount != atomsCount) {
-        // printf("WARNING: atoms count in file %d != %d atoms expected\n", realCount, atomsCount);
+        printf("WARNING: atoms count in file %d != %d atoms expected\n", realCount, atomsCount);
         // return 0; 
     }
-    Grid* grid = formGrid(atoms, atomsCount, cellsX, cellsY, cellsZ, atomsX, atomsY, atomsZ);
-    
-    Atom** neighbors;
-    neighbors = findNeighbors(grid);
+    Grid* grid = formGrid(atoms, realCount, cellsX, cellsY, cellsZ, atomsX, atomsY, atomsZ);
+    NeighborList* neighbors = findNeighbors(grid);
 
     // for (int i = 0; i < 0; i++) {
     //     if (neighbors[i]->preNeighbors != neighbors[i]->neighbors) {
@@ -136,10 +131,10 @@ int selectCell(int atomId, Grid* grid, GridCell gridCell) {
     return cellId;
 }
 
-Atom** findNeighbors(Grid* grid) {
-    Atom **neighbors = malloc(grid->atomsCount * sizeof(Atom**));
+NeighborList* findNeighbors(Grid* grid) {
+    NeighborList *neighbors = malloc(grid->atomsCount * sizeof(NeighborList*));
     for (int i = 0; i < grid->atomsCount; i++) {
-        neighbors[i] = malloc(NEIGHBORS_COUNT_MAX * sizeof(Atom*));
+        neighbors[i].ids = malloc(NEIGHBORS_COUNT_MAX * sizeof(int));
     }
     int cellsCount = grid->xCellsCount * grid->yCellsCount * grid->zCellsCount;
     for (int i = 0; i < cellsCount; i++) {
@@ -148,40 +143,39 @@ Atom** findNeighbors(Grid* grid) {
     return neighbors;
 }
 
-void findNeighborsInCell(Grid* grid, GridCell* cell, int cellId, Atom** neighbors) {
+void findNeighborsInCell(Grid* grid, GridCell* cell, int cellId, NeighborList* neighbors) {
     for (int i = 0; i < cell->atomsCount; i++) {
-        int curNeighborsCount = 0;
+        int *curNeighborsCount = &neighbors[i].count;
         for (int j = 0; j < cell->atomsCount; j++) {
             if (i != j && isNeighbor(cell->atoms[i], cell->atoms[j])) {
-                neighbors[cell->atoms[i].id][curNeighborsCount] = cell->atoms[j];
-                curNeighborsCount++;
+                neighbors[cell->atoms[i].id].ids[*curNeighborsCount] = cell->atoms[j].id;
+                *curNeighborsCount++;
             }
         }
         // printf("nghrb %d\n", curNeighborsCount);
-        if (curNeighborsCount < NEIGHBORS_COUNT_MAX) {
+        if (*curNeighborsCount < NEIGHBORS_COUNT_MAX) {
             // printf("find nee\n");
-            int nghbrsCount = findNeighborsInNearCells(grid, cellId, &cell->atoms[i], neighbors, curNeighborsCount);
-            curNeighborsCount = nghbrsCount;
+            findNeighborsInNearCells(grid, cellId, cell->atoms[i], neighbors);
         }
-        cell->atoms[i].neighbors = curNeighborsCount;
+        // cell->atoms[i].neighbors = curNeighborsCount;
     }
 }
 
-int findNeighborsInNearCells(Grid* grid, int cellId, Atom* atom, Atom* neighbors[], int curNeighbors) {
-    int* cellNeighborsIDs = malloc(MAX_CELL_NEIGHBORS_COUNT * sizeof(int));
-    int cellNeighborsCount = getNearCellsIDs(grid, cellId, cellNeighborsIDs);
+void findNeighborsInNearCells(Grid* grid, int cellId, Atom atom, NeighborList* neighbors) {
+    int* neighborCellsID = malloc(MAX_CELL_NEIGHBORS_COUNT * sizeof(int));
+    int cellNeighborsCount = getNearCellsIDs(grid, cellId, neighborCellsID);
     for (int i = 0; i < cellNeighborsCount; i++) {
-        for (int j = 0; j < grid->cells[cellNeighborsIDs[i]].atomsCount; j++) {
-            if (isNeighbor(*atom, grid->cells[cellNeighborsIDs[i]].atoms[j])) {
-                neighbors[curNeighbors] = &grid->cells[cellNeighborsIDs[i]].atoms[j];
-                curNeighbors++;
+        int *curNeighborsCount = &neighbors[atom.id].count;
+        for (int j = 0; j < grid->cells[neighborCellsID[i]].atomsCount; j++) {
+            if (isNeighbor(atom, grid->cells[neighborCellsID[i]].atoms[j])) {
+                neighbors[atom.id].ids[*curNeighborsCount] = grid->cells[neighborCellsID[i]].atoms[j].id;
+                *curNeighborsCount++;
             }
         }
     }
-    return curNeighbors;
 }
 
-int getNearCellsIDs(Grid* grid, int cellId, int cellNeighborsIDS[]) {
+int getNearCellsIDs(Grid* grid, int cellId, int *cellNeighborsIDS) {
     int cellNeighborsCount = 0;
     int z = cellId / (grid->xCellsCount * grid->yCellsCount);
     int xyLayerPos = cellId % (grid->xCellsCount * grid->yCellsCount);
@@ -268,31 +262,4 @@ void printCell(GridCell cell, int x, int y, int z, int id) {
 
 void printAtom(Atom atom) {
     printf("\tAtom: %d, x: %lf, y: %lf, z: %lf\n", atom.id, atom.x, atom.y, atom.z);
-}
-
-void writeFile(Atom** neighbors, int atomsCount) {
-    FILE *f = fopen("cellsFinal.csv", "w");
-    if (!f) {
-        perror("Ошибка открытия файла");
-        return;
-    }
-
-    fprintf(f, "id,x,y,z,neighbors\n");
-    for (int i = 0; i < atomsCount; i++) {
-        // if (neighbors[i]->id > atomsCount || (neighbors[i]->x == 0.0 && neighbors[i]->y == 0.0 && neighbors[i]->z == 0.0)) {
-        //     printf("continue\n");
-        //     continue;
-        // }
-        for (int j = 0; j < neighbors[i]->neighbors; j++) {
-            fprintf(f, "%d,%.6f,%.6f,%.6f,%d\n",
-                neighbors[i]->id,
-                neighbors[i]->x,
-                neighbors[i]->y,
-                neighbors[i]->z,
-                neighbors[i]->neighbors);
-        }
-        
-    }
-
-    fclose(f);
 }

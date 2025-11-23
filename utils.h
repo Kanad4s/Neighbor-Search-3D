@@ -8,7 +8,7 @@ typedef struct {
     int preNeighbors;
 } Atom;
 
-void writeFile(Atom* atoms, Atom** neighbors, int atomsCount);
+void writeFile(Atom* atoms, Atom** neighbors, int atomsCount, char *filename);
 int read_csv(const char *filename, Atom **atomsOut, int atomsCount);
 int read_cls(const char *filename, Atom **atomsOut, int atomsCount, int cellsCount);
 
