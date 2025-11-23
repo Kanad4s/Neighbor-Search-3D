@@ -16,24 +16,12 @@ typedef struct {
     int count;
 } NeighborList;
 
-typedef struct {
-    Atom* atoms;
-    int atomsCount;
-    int xAtomsCount, yAtomsCount, zAtomsCount;
-} GridCell;
-
-typedef struct {
-    GridCell* cells;
-    int xCellsCount, yCellsCount, zCellsCount;
-    int atomsCount;
-} Grid;
 
 typedef struct {
     double x, y, z;
 } Substract;
 
 int isNeighbor(Atom a, Atom b);
-Atom* getAtoms(int count);
 NeighborList* findNeighbors(Grid* grid);
 int selectCell(int atomId, Grid* grid, GridCell gridCell);
 Grid* formGrid(Atom* atoms, int atomsCount, int xCells, int yCells, int zCells,
@@ -41,12 +29,13 @@ Grid* formGrid(Atom* atoms, int atomsCount, int xCells, int yCells, int zCells,
 void findNeighborsInCell(Grid* grid, GridCell* cell, int cellId, NeighborList* neighbors);
 void findNeighborsInNearCells(Grid* grid, int cellId, Atom atom, NeighborList *neighbors);
 int getNearCellsIDs(Grid* grid, int cellId, int *cellNeighbors);
-int convertCellCoordsToId(int x, int y, int z, int Nx, int Ny, int Nz);
-void printGrid(Grid* grid);
-void printCell(GridCell cell, int x, int y, int z, int id);
-void printAtom(Atom atom);
 
-int main() {
+int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        printf("Usage: %s <filename>\n", argv[0]);
+        return 1;
+    }
+    printf("Passed file: %s\n", argv[1]);
     // размеры подложки в атомах
     int atomsX = 68, atomsY = 68, atomsZ = 4;
     // int atomsCount = atomsX * atomsY * atomsZ;
@@ -56,14 +45,15 @@ int main() {
     int cellsY = 17;
     int cellsZ = 2;
     int cellsCount = cellsX * cellsY * cellsZ;
-    printf("Atoms: %d, cells: %d\n", atomsCount, cellsX * cellsY * cellsZ);
+    printf("Cells: %d\n", cellsX * cellsY * cellsZ);
     Atom* atoms;
-    int realCount = read_cls("mdf.cls", &atoms, atomsCount, cellsCount);
+    int realCount = read_cls(argv[1], &atoms, atomsCount, cellsCount);
     if (realCount != atomsCount) {
         printf("WARNING: atoms count in file %d != %d atoms expected\n", realCount, atomsCount);
         // return 0; 
     }
     Grid* grid = formGrid(atoms, realCount, cellsX, cellsY, cellsZ, atomsX, atomsY, atomsZ);
+    printf("grid formed\n");
     NeighborList* neighbors = findNeighbors(grid);
 
     // for (int i = 0; i < 0; i++) {
@@ -83,7 +73,7 @@ Grid* formGrid(Atom* atoms, int atomsCount, int xCells, int yCells, int zCells,
     int cellsCount = xCells * yCells * zCells;
     int atomsPerCell = atomsCount / cellsCount;
     // printf("Cells: %d\n", cellsCount);
-    // printf("Atoms per cell: %d\n", atomsPerCell);
+    printf("Atoms per cell: %d\n", atomsPerCell);
     grid->xCellsCount = xCells;
     grid->yCellsCount = yCells;
     grid->zCellsCount = zCells;
@@ -92,7 +82,7 @@ Grid* formGrid(Atom* atoms, int atomsCount, int xCells, int yCells, int zCells,
     gridCell.yAtomsCount = yAtoms / yCells;
     gridCell.zAtomsCount = zAtoms / zCells;
     if (atomsCount % cellsCount != 0) {
-        printf("WARNING: atomsCount %% cellsCount == %d != 0\n", atomsCount % cellsCount);
+        printf("WARNING: atomsCount %% cellsCount = %d != 0\n", atomsCount % cellsCount);
         atomsPerCell++;
         printf("Updated atoms per cell: %d\n", atomsPerCell);
     }
@@ -212,9 +202,6 @@ void idToXyz(int id, int Nx, int Ny, int Nz, int *x, int *y, int *z) {
     *x = rem % Nx;
 }
 
-int convertCellCoordsToId(int x, int y, int z, int Nx, int Ny, int Nz) {
-    return x + y * Nx + z * Nx * Ny;
-}
 
 int isNeighbor(Atom a, Atom b) {
     double x = a.x - b.x;
@@ -226,40 +213,4 @@ int isNeighbor(Atom a, Atom b) {
         return 1;
     }
     return 0;
-}
-
-
-
-
-Atom* getAtoms(int count) {
-    Atom *atoms = malloc(count * sizeof(Atom));
-    for (int i = 0; i < count; i++) {
-        atoms[i].id = i;
-        atoms[i].x = i % 20;
-        atoms[i].y = i % 20;
-        atoms[i].z = i % 20;
-    }
-    return atoms;
-}
-
-void printGrid(Grid* grid) {
-    for (int z = 0; z < grid->zCellsCount; z++) {
-        for (int y = 0; y < grid->yCellsCount; y++) {
-            for (int x = 0; x < grid->xCellsCount; x++) {
-                int id = convertCellCoordsToId(x, y, z, grid->xCellsCount, grid->yCellsCount, grid->zCellsCount);
-                printCell(grid->cells[id], x, y, z, id);
-            }
-        }
-    }
-}
-
-void printCell(GridCell cell, int x, int y, int z, int id) {
-    printf("Cell: %d, x: %d, y: %d, z: %d\nAtoms:\n", id, x, y, z);
-    for (int i = 0; i < cell.atomsCount; i++) {
-        printAtom(cell.atoms[i]);
-    }
-}
-
-void printAtom(Atom atom) {
-    printf("\tAtom: %d, x: %lf, y: %lf, z: %lf\n", atom.id, atom.x, atom.y, atom.z);
 }

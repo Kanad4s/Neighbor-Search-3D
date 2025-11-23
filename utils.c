@@ -58,8 +58,7 @@ int read_cls(const char *filename, Atom **atomsOut, int atomsCount, int cellsCou
 
      for (int i = 0; i < 3; i++) {
         fgets(line, sizeof(line), f);
-        printf("%s\n", line);
-        
+        // printf("%s\n", line);
     }
 
     while (fgets(line, sizeof(line), f)) {
@@ -116,8 +115,7 @@ int read_csv(const char *filename, Atom **atomsOut, int atomsCount) {
 
     for (int i = 0; i < 3; i++) {
         fgets(line, sizeof(line), f);
-        printf("%s\n", line);
-        
+        // printf("%s\n", line);
     }
 
     while (fgets(line, sizeof(line), f)) {
@@ -146,3 +144,29 @@ int read_csv(const char *filename, Atom **atomsOut, int atomsCount) {
     return count;
 }
 
+void printGrid(Grid* grid) {
+    for (int z = 0; z < grid->zCellsCount; z++) {
+        for (int y = 0; y < grid->yCellsCount; y++) {
+            for (int x = 0; x < grid->xCellsCount; x++) {
+                int id = convertCellCoordsToId(x, y, z, grid->xCellsCount, grid->yCellsCount, grid->zCellsCount);
+                printCell(grid->cells[id], x, y, z, id);
+            }
+        }
+    }
+}
+
+void printCell(GridCell cell, int x, int y, int z, int id) {
+    printf("Cell: %d, x: %d, y: %d, z: %d\nAtoms:\n", id, x, y, z);
+    for (int i = 0; i < cell.atomsCount; i++) {
+        printAtom(cell.atoms[i]);
+    }
+}
+
+void printAtom(Atom atom) {
+    printf("\tAtom: %d, x: %lf, y: %lf, z: %lf\n", atom.id, atom.x, atom.y, atom.z);
+}
+
+
+int convertCellCoordsToId(int x, int y, int z, int Nx, int Ny, int Nz) {
+    return x + y * Nx + z * Nx * Ny;
+}
