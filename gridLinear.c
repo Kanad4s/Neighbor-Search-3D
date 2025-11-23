@@ -12,16 +12,9 @@ const int MAX_CELL_NEIGHBORS_COUNT = 26;
 const char *WRITE_FILE_NAME = "grisLinear.csv";
 
 typedef struct {
-    int *ids;
-    int count;
-} NeighborList;
-
-
-typedef struct {
     double x, y, z;
 } Substract;
 
-int isNeighbor(Atom a, Atom b);
 NeighborList* findNeighbors(Grid* grid);
 int selectCell(int atomId, Grid* grid, GridCell gridCell);
 Grid* formGrid(Atom* atoms, int atomsCount, int xCells, int yCells, int zCells,
@@ -122,9 +115,10 @@ int selectCell(int atomId, Grid* grid, GridCell gridCell) {
 }
 
 NeighborList* findNeighbors(Grid* grid) {
-    NeighborList *neighbors = malloc(grid->atomsCount * sizeof(NeighborList*));
+    NeighborList *neighbors = malloc(grid->atomsCount * sizeof(NeighborList));
     for (int i = 0; i < grid->atomsCount; i++) {
         neighbors[i].ids = malloc(NEIGHBORS_COUNT_MAX * sizeof(int));
+        neighbors[i].count = 0;
     }
     int cellsCount = grid->xCellsCount * grid->yCellsCount * grid->zCellsCount;
     for (int i = 0; i < cellsCount; i++) {
@@ -137,17 +131,15 @@ void findNeighborsInCell(Grid* grid, GridCell* cell, int cellId, NeighborList* n
     for (int i = 0; i < cell->atomsCount; i++) {
         int *curNeighborsCount = &neighbors[i].count;
         for (int j = 0; j < cell->atomsCount; j++) {
-            if (i != j && isNeighbor(cell->atoms[i], cell->atoms[j])) {
+            if (i != j && isNeighbor(cell->atoms[i], cell->atoms[j], NEIGHBOR_RADIUS)) {
                 neighbors[cell->atoms[i].id].ids[*curNeighborsCount] = cell->atoms[j].id;
                 *curNeighborsCount++;
             }
         }
-        // printf("nghrb %d\n", curNeighborsCount);
+        
         if (*curNeighborsCount < NEIGHBORS_COUNT_MAX) {
-            // printf("find nee\n");
             findNeighborsInNearCells(grid, cellId, cell->atoms[i], neighbors);
         }
-        // cell->atoms[i].neighbors = curNeighborsCount;
     }
 }
 
@@ -200,17 +192,4 @@ void idToXyz(int id, int Nx, int Ny, int Nz, int *x, int *y, int *z) {
     int rem = id % (Nx * Ny);
     *y = rem / Nx;
     *x = rem % Nx;
-}
-
-
-int isNeighbor(Atom a, Atom b) {
-    double x = a.x - b.x;
-    double y = a.y - b.y;
-    double z = a.z - b.z;
-    double r = sqrt(x * x + y * y + z * z);
-    // printf("%f\n", r);
-    if (r <= NEIGHBOR_RADIUS) {
-        return 1;
-    }
-    return 0;
 }

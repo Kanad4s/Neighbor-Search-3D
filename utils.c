@@ -6,7 +6,7 @@
 #include "utils.h"
 #include <string.h>
 
-void writeFile(Atom* atoms, Atom** neighbors, int atomsCount, char *filename) {
+void writeFile(Atom *atoms, NeighborList *neighbors, int atomsCount, char *filename) {
     FILE *f = fopen(filename, "w");
     if (!f) {
         perror("Ошибка открытия файла");
@@ -18,20 +18,18 @@ void writeFile(Atom* atoms, Atom** neighbors, int atomsCount, char *filename) {
         // if (neighbors[i]->id > atomsCount || (neighbors[i]->x == 0.0 && neighbors[i]->y == 0.0 && neighbors[i]->z == 0.0)) {
         //     continue;
         // }
-        int curNeighborsCount = 0;
         fprintf(f, "atom:%d,%.6f,%.6f,%.6f,neighbors:%d, ", 
                 atoms[i].id,
                 atoms[i].x,
                 atoms[i].y,
                 atoms[i].z,
-                atoms[i].neighbors);
-        for (int j = 0; j < atoms[i].neighbors; j++) {
-            curNeighborsCount = 0;
+                neighbors[i].count);
+        for (int j = 0; j < neighbors[i].count; j++) {
             fprintf(f, "id:%d,%.6f,%.6f,%.6f, ", 
-                neighbors[i][j].id,
-                neighbors[i][j].x,
-                neighbors[i][j].y,
-                neighbors[i][j].z);
+                atoms[neighbors[i].ids[j]].id,
+                atoms[neighbors[i].ids[j]].x,
+                atoms[neighbors[i].ids[j]].y,
+                atoms[neighbors[i].ids[j]].z);
         }
         fprintf(f, "\n");
         // printf("atoms.neighbors %d, countedNeighbors: %d\n", atoms[i].neighbors, curNeighborsCount);
@@ -169,4 +167,16 @@ void printAtom(Atom atom) {
 
 int convertCellCoordsToId(int x, int y, int z, int Nx, int Ny, int Nz) {
     return x + y * Nx + z * Nx * Ny;
+}
+
+int isNeighbor(Atom a, Atom b, double neighborRadius) {
+    double x = a.x - b.x;
+    double y = a.y - b.y;
+    double z = a.z - b.z;
+    double r = sqrt(x * x + y * y + z * z);
+    // printf("%f\n", r);
+    if (r <= neighborRadius) {
+        return 1;
+    }
+    return 0;
 }

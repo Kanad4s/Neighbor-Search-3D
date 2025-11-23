@@ -20,7 +20,13 @@ typedef struct {
     int atomsCount;
 } Grid;
 
-void writeFile(Atom* atoms, Atom** neighbors, int atomsCount, char *filename);
+typedef struct {
+    int *ids;
+    int count;
+} NeighborList;
+
+
+void writeFile(Atom *atoms, NeighborList *neighbors, int atomsCount, char *filename);
 int read_csv(const char *filename, Atom **atomsOut, int atomsCount);
 int read_cls(const char *filename, Atom **atomsOut, int atomsCount, int cellsCount);
 void printGrid(Grid* grid);
@@ -28,6 +34,7 @@ void printCell(GridCell cell, int x, int y, int z, int id);
 void printAtom(Atom atom);
 
 int convertCellCoordsToId(int x, int y, int z, int Nx, int Ny, int Nz);
+int isNeighbor(Atom a, Atom b, double neighborRadius);
 
 
 #endif
