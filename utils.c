@@ -7,6 +7,7 @@
 #include <string.h>
 
 void writeFile(Atom *atoms, NeighborList *neighbors, int atomsCount, char *filename) {
+    printf("write into %s\n", filename);
     FILE *f = fopen(filename, "w");
     if (!f) {
         perror("Ошибка открытия файла");
@@ -166,6 +167,7 @@ void printAtom(Atom atom) {
 
 
 int convertCellCoordsToId(int x, int y, int z, int Nx, int Ny, int Nz) {
+    printf("%d, %d, %d, %d, %d, %d, cell: %d\n", x, y, z, Nx, Ny, Nz, x + y * Nx + z * Nx * Ny);
     return x + y * Nx + z * Nx * Ny;
 }
 

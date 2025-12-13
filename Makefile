@@ -5,6 +5,8 @@ TARGETGENERATE = generate
 UTILS = utils.c
 
 FILE ?= mdf.cls
+COMPARE1 ?= linear.csv
+COMPARE2 ?= gridLinear.csv
 
 GCC = gcc
 MPICC = mpicc
@@ -31,7 +33,7 @@ cleanCells:
 buildCells: cleanCells gridLinear.c
 	$(GCC) gridLinear.c $(UTILS) -o $(TARGETCELLS) $(LIBS)
 
-runCells: buildCells
+runGrid: buildCells
 	./$(TARGETCELLS) $(FILE)
 
 cleanMpi: 
@@ -51,12 +53,16 @@ clean:
 
 generate: generate.c 
 	$(GCC) generate.c -o $(TARGETGENERATE)
+
+compare:
+	./compare $(COMPARE1) $(COMPARE2)
+
 help:
-	@echo "build"
-	@echo "buildMpi"
-	@echo "buildLinear" 
-	@echo "run"
+	@echo "runLinear" 
+	@echo "runGrid" 
+	@echo "runMPI"
 	@echo "clean"
 	@echo "generate"
+	@echo "compare"
 
 .DEFAULT_GOAL := help
