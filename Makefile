@@ -55,7 +55,7 @@ generate: generate.c
 	$(GCC) generate.c -o $(TARGETGENERATE)
 
 compare:
-	./compare $(COMPARE1) $(COMPARE2)
+	./compare.py $(COMPARE1) $(COMPARE2)
 
 help:
 	@echo "runLinear" 

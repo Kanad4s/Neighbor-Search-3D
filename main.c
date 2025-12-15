@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     printf("Passed file: %s\n", argv[1]);
-    int atomsCount = 18390;
+    int atomsCount = 18389;
 
     double radius = 2.5;
 
