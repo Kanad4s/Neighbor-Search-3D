@@ -25,10 +25,14 @@ typedef struct {
     int count;
 } NeighborList;
 
+typedef struct {
+    double minX, maxX, minY, maxY, minZ, maxZ;
+} Substract;
 
 void writeFile(Atom *atoms, NeighborList *neighbors, int atomsCount, char *filename);
 int read_csv(const char *filename, Atom **atomsOut, int atomsCount);
 int read_cls(const char *filename, Atom **atomsOut, int atomsCount, int cellsCount);
+int read_cls_with_bounds(const char *filename, Atom **atomsOut, int atomsCount, Substract *substract);
 void printGrid(Grid* grid);
 void printCell(GridCell cell, int x, int y, int z, int id);
 void printAtom(Atom atom);

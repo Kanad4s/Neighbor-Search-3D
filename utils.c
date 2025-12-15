@@ -39,7 +39,6 @@ void writeFile(Atom *atoms, NeighborList *neighbors, int atomsCount, char *filen
     fclose(f);
 }
 
-
 int read_cls(const char *filename, Atom **atomsOut, int atomsCount, int cellsCount) {
     FILE *f = fopen(filename, "r");
     if (!f) {
@@ -55,7 +54,7 @@ int read_cls(const char *filename, Atom **atomsOut, int atomsCount, int cellsCou
         return -1;
     }
 
-     for (int i = 0; i < 3; i++) {
+     for (int i = 0; i < 4; i++) {
         fgets(line, sizeof(line), f);
         // printf("%s\n", line);
     }
@@ -96,6 +95,72 @@ int read_cls(const char *filename, Atom **atomsOut, int atomsCount, int cellsCou
     return count;
 }
 
+int read_cls_with_bounds(const char *filename, Atom **atomsOut, int atomsCount,Substract *substract) {
+    FILE *f = fopen(filename, "r");
+    if (!f) {
+        perror("Ошибка открытия файла");
+        return -1;
+    }
+
+    char line[256];
+    int count = 0;
+    Atom *atoms = malloc(atomsCount * sizeof(Atom));
+    if (!atoms) {
+        fclose(f);
+        return -1;
+    }
+
+    for (int i = 0; i < 4; i++) fgets(line, sizeof(line), f);
+
+    int firstAtom = 1;
+    while (fgets(line, sizeof(line), f)) {
+        int has_digit = 0;
+        for (int j = 0; line[j]; j++) {
+            if (isdigit((unsigned char)line[j]) || line[j] == '-' || line[j] == '+') {
+                has_digit = 1;
+                break;
+            }
+        }
+        if (!has_digit) continue;
+
+        Atom a;
+        a.id = count;
+        int n = sscanf(line, "%lf %lf %lf", &a.x, &a.y, &a.z);
+        if (n != 3) continue;
+
+        if (count >= atomsCount) {
+            atomsCount *= 2;
+            Atom *tmp = realloc(atoms, atomsCount * sizeof(Atom));
+            if (!tmp) {
+                free(atoms);
+                fclose(f);
+                return -1;
+            }
+            atoms = tmp;
+        }
+
+        atoms[count++] = a;
+
+        if (firstAtom) {
+            substract->minX = substract->maxX = a.x;
+            substract->minY = substract->maxY = a.y;
+            substract->minZ = substract->maxZ = a.z;
+            firstAtom = 0;
+        } else {
+            if (a.x < substract->minX) substract->minX = a.x;
+            if (a.x > substract->maxX) substract->maxX = a.x;
+            if (a.y < substract->minY) substract->minY = a.y;
+            if (a.y > substract->maxY) substract->maxY = a.y;
+            if (a.z < substract->minZ) substract->minZ = a.z;
+            if (a.z > substract->maxZ) substract->maxZ = a.z;
+        }
+    }
+
+    fclose(f);
+    *atomsOut = atoms;
+    return count;
+}
+
 
 int read_csv(const char *filename, Atom **atomsOut, int atomsCount) {
     FILE *f = fopen(filename, "r");
@@ -112,7 +177,7 @@ int read_csv(const char *filename, Atom **atomsOut, int atomsCount) {
         return -1;
     }
 
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 4; i++) {
         fgets(line, sizeof(line), f);
         // printf("%s\n", line);
     }
@@ -165,9 +230,8 @@ void printAtom(Atom atom) {
     printf("\tAtom: %d, x: %lf, y: %lf, z: %lf\n", atom.id, atom.x, atom.y, atom.z);
 }
 
-
 int convertCellCoordsToId(int x, int y, int z, int Nx, int Ny, int Nz) {
-    printf("%d, %d, %d, %d, %d, %d, cell: %d\n", x, y, z, Nx, Ny, Nz, x + y * Nx + z * Nx * Ny);
+    // printf("convertCellCoordsToID: x: %d, y: %d, z:%d, Nx: %d, Ny: %d, Nz: %d, ConvertedCellID: %d\n", x, y, z, Nx, Ny, Nz, x + y * Nx + z * Nx * Ny);
     return x + y * Nx + z * Nx * Ny;
 }
 
