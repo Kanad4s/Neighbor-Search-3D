@@ -48,9 +48,6 @@ int main(int argc, char *argv[]) {
             return 1;
         }
         printf("Passed file: %s\n", argv[1]);
-        // int cellsX = 17;
-        // int cellsY = 17;
-        // int cellsZ = 2;
 
         int cellsCount = cellsX * cellsY * cellsZ;
         printf("Cells: %d\n", cellsX * cellsY * cellsZ);
@@ -65,10 +62,6 @@ int main(int argc, char *argv[]) {
 
         grid = formGrid(atoms, realCount, cellsX, cellsY, cellsZ, substract);
         printf("grid formed\n");
-        // printGrid(grid);
-        for (int i = 0; i < grid->xCellsCount * grid->yCellsCount * grid->zCellsCount; i++) {
-            // printf("cell: %d has atoms: %d\n", i, grid->cells[i].atomsCount);
-        }
         
         neighbors = malloc(grid->atomsCount * sizeof(NeighborList));
         for (int i = 0; i < grid->atomsCount; i++) {
@@ -76,8 +69,6 @@ int main(int argc, char *argv[]) {
             neighbors[i].count = 0;
         }
     }
-
-
 
     if (rank == 0) {
         findNeighbors(grid, neighbors);
@@ -119,6 +110,7 @@ Grid* formGrid(Atom* atoms, int atomsCount, int xCells, int yCells, int zCells, 
     grid->cells = malloc(totalCells * sizeof(GridCell));
 
     for (int i = 0; i < totalCells; i++) {
+        grid->cells[i].id = i;
         grid->cells[i].atomsCount = 0;
         grid->cells[i].atoms = malloc(((atomsCount / totalCells) * 2.1) * sizeof(Atom)); 
     }
@@ -160,23 +152,9 @@ void findNeighborsInCell(Grid *grid, GridCell *cell, int cellId, NeighborList *n
                 }
             }
         }
-        if (id == 18331) {
-            printf("BEFORE FindNeighborsInNearCells, atomID: %d neighbors: ", id);
-            for (int k = 0; k < neighbors[id].count; k++) {
-                printf("neighbor: %d, ", neighbors[id].ids[k]);
-            }
-            printf("\n");
-        }
         
         if (neighbors[id].count < NEIGHBORS_COUNT_MAX) {
             findNeighborsInNearCells(grid, cellId, cell->atoms[i], neighbors);
-        }
-        if (id == 18331) {
-            printf("AFTER FindNeighborsInNearCells, atomID: %d neighbors: ", id);
-            for (int k = 0; k < neighbors[id].count; k++) {
-                printf("neighbor: %d, ", neighbors[id].ids[k]);
-            }
-            printf("\n");
         }
     }
 }

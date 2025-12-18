@@ -9,6 +9,7 @@ typedef struct {
 } Atom;
 
 typedef struct {
+    int id;
     Atom* atoms;
     int atomsCount;
     int xAtomsCount, yAtomsCount, zAtomsCount;
