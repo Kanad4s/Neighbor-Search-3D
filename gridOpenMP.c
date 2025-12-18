@@ -5,11 +5,13 @@
 #include <ctype.h>
 #include <unistd.h>
 #include "utils.h"
+#include <omp.h>
+
 
 const int NEIGHBORS_COUNT_MAX = 4;
 const double NEIGHBOR_RADIUS = 2.5;
 const int MAX_CELL_NEIGHBORS_COUNT = 26;
-char *WRITE_FILE_NAME = "gridLinear.csv";
+char *WRITE_FILE_NAME = "gridOpenMP.csv";
 
 void findNeighbors(Grid *grid, NeighborList *neighbors);
 Grid* formGrid(Atom *atoms, int atomsCount, int xCells, int yCells, int zCells, Substract substract);
@@ -24,6 +26,8 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     printf("Passed file: %s\n", argv[1]);
+    printf("threads = %d\n", omp_get_max_threads());
+
     int atomsCount = 18389;
 
     int cellsX = 20;
@@ -57,7 +61,7 @@ int main(int argc, char *argv[]) {
         neighbors[i].ids = malloc(NEIGHBORS_COUNT_MAX * sizeof(int));
         neighbors[i].count = 0;
     }
-
+    
     findNeighbors(grid, neighbors);
 
     writeFile(atoms, neighbors, atomsCount, WRITE_FILE_NAME);
@@ -114,6 +118,8 @@ Grid* formGrid(Atom* atoms, int atomsCount, int xCells, int yCells, int zCells, 
 
 void findNeighbors(Grid *grid, NeighborList *neighbors) {
     int cellsCount = grid->xCellsCount * grid->yCellsCount * grid->zCellsCount;
+
+    #pragma omp parallel for schedule(dynamic)
     for (int i = 0; i < cellsCount; i++) {
         findNeighborsInCell(grid, &grid->cells[i], i, neighbors);
     }

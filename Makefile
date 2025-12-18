@@ -1,5 +1,6 @@
 TARGETLINEAR = linear
 TARGETMPI = mpi
+TARGETOPENMP = gridOpenMP
 TARGETCELLS = cells
 TARGETGENERATE = generate
 UTILS = utils.c
@@ -44,12 +45,22 @@ buildMpi: cleanMpi parallelMpi.c
 	
 runMpi: buildMpi
 	$(MPIRUN) -np $(np) ./$(TARGETMPI) $(FILE)
+	
+cleanOpenMP: 
+	rm -rf $(TARGETOPENMP)
 
-clean:
+buildOpenMP: cleanOpenMP gridOpenMP.c
+	$(GCC) -fopenmp gridOpenMP.c utils.c -lm -o $(TARGETOPENMP)
+	
+runOpenMP: buildOpenMP
+	OMP_NUM_THREADS=8 ./$(TARGETOPENMP)  $(FILE)
+
+clean: cleanOpenMP
 	rm -rf $(TARGETLINEAR)
 	rm -rf $(TARGETMPI)
 	rm -rf $(TARGETCELLS)
 	rm -rf $(TARGETGENERATE)
+
 
 generate: generate.c 
 	$(GCC) generate.c -o $(TARGETGENERATE)
