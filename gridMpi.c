@@ -34,6 +34,14 @@ int main(int argc, char *argv[]) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &nProcesses);
 
+    if (rank == 0 && cellsX % nProcesses != 0) {
+        printf("ABORTED: the number of cells on the x-axis (%d) is not divisible by number of processes (%d) - %d %% %d = %d\n",
+            cellsX, nProcesses, cellsX, nProcesses, cellsX % nProcesses);
+        
+        MPI_Finalize();
+        return 0;
+    }
+
     if (rank == 0) {
         if (argc < 2) {
             printf("Usage: %s <filename>\n", argv[0]);
@@ -68,6 +76,8 @@ int main(int argc, char *argv[]) {
             neighbors[i].count = 0;
         }
     }
+
+
 
     if (rank == 0) {
         findNeighbors(grid, neighbors);
