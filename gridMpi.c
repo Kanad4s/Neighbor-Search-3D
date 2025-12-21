@@ -30,6 +30,8 @@ int main(int argc, char *argv[]) {
     int cellsY = 20;
     int cellsZ = 2;
 
+    int cellsCount = cellsX * cellsY * cellsZ;
+
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &nProcesses);
@@ -48,8 +50,6 @@ int main(int argc, char *argv[]) {
             return 1;
         }
         printf("Passed file: %s\n", argv[1]);
-
-        int cellsCount = cellsX * cellsY * cellsZ;
         printf("Cells: %d\n", cellsX * cellsY * cellsZ);
         Substract substract;
         int realCount = read_cls_with_bounds(argv[1], &atoms, atomsCount, &substract);
@@ -68,13 +68,22 @@ int main(int argc, char *argv[]) {
             neighbors[i].ids = malloc(NEIGHBORS_COUNT_MAX * sizeof(int));
             neighbors[i].count = 0;
         }
+    } else {
+        neighbors = malloc(grid->atomsCount / nProcesses * sizeof(NeighborList));
+        for (int i = 0; i < grid->atomsCount; i++) {
+            neighbors[i].ids = malloc(NEIGHBORS_COUNT_MAX * sizeof(int));
+            neighbors[i].count = 0;
+        }
     }
+    // neighbors->ids = neighbors->ids[cellsCount / nProcesses * rank];
+    // neighbors->count = neighbors->count / nProcesses;
+
+    findNeighbors(grid, neighbors);
 
     if (rank == 0) {
         findNeighbors(grid, neighbors);
 
     }
-
 
     if (rank == 0) {
         writeFile(atoms, neighbors, atomsCount, WRITE_FILE_NAME);

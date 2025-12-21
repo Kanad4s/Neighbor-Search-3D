@@ -15,7 +15,7 @@ MPIRUN = mpirun
 
 LIBS = -lm
 
-np = 8
+NP = 8
 
 .PHONY: build, run, clean, generate, buildMpi, buildLinear
 
@@ -46,7 +46,7 @@ buildMpi: cleanMpi gridMpi.c
 	$(MPICC) gridMpi.c $(UTILS) -o $(TARGETMPI) $(LIBS)
 	
 runMpi: buildMpi
-	$(MPIRUN) -np $(np) ./$(TARGETMPI) $(FILE)
+	$(MPIRUN) -np $(NP) ./$(TARGETMPI) $(FILE)
 	
 
 cleanOpenMP: 
