@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
     Atom *atoms;
     NeighborList *neighbors;
     Grid *grid;
-    int atomsCount = 18389;  // реально используемое число атомов
+    int atomsCount = 18389;
     int cellsX = 24, cellsY = 20, cellsZ = 2;
 
     MPI_Init(&argc, &argv);
@@ -47,38 +47,33 @@ int main(int argc, char *argv[]) {
     int realCount = 0;
     if(rank==0){
         realCount = read_cls_with_bounds(argv[1], &atoms, atomsCount, &substract);
-        if(realCount != atomsCount)
+        if(realCount != atomsCount){
             printf("Warning: atoms in file (%d) != expected (%d)\n", realCount, atomsCount);
+        }
     } else {
         atoms = malloc(atomsCount * sizeof(Atom));
     }
 
-    // --- Bcast атомов и Substract ---
     MPI_Bcast(&substract, sizeof(Substract), MPI_BYTE, 0, MPI_COMM_WORLD);
     MPI_Bcast(atoms, atomsCount*sizeof(Atom), MPI_BYTE, 0, MPI_COMM_WORLD);
 
-    // --- создаём Grid на всех процессах ---
     grid = formGrid(atoms, atomsCount, cellsX, cellsY, cellsZ, substract);
 
-    // --- выделяем память под neighbors ---
     neighbors = malloc(grid->atomsCount * sizeof(NeighborList));
     for(int i=0;i<grid->atomsCount;i++){
         neighbors[i].ids = malloc(NEIGHBORS_COUNT_MAX*sizeof(int));
         neighbors[i].count = 0;
     }
 
-    // --- распределение клеток по процессам ---
     int cellsCount = grid->xCellsCount * grid->yCellsCount * grid->zCellsCount;
     int cellsPerProc = cellsCount / nProcesses;
     int startCell = rank * cellsPerProc;
     int endCell = (rank==nProcesses-1) ? cellsCount : startCell + cellsPerProc;
 
-    // --- поиск соседей ---
     for(int i=startCell;i<endCell;i++){
         findNeighborsInCell(grid, &grid->cells[i], i, neighbors);
     }
 
-    // --- сериализация NeighborList для Gatherv ---
     int sendCount = grid->atomsCount * NEIGHBORS_COUNT_MAX;
     int *sendBuf = malloc(sendCount * sizeof(int));
     for(int i=0;i<grid->atomsCount;i++){
@@ -98,11 +93,8 @@ int main(int argc, char *argv[]) {
         recvBuf = malloc(sendCount*nProcesses*sizeof(int));
     }
 
-    MPI_Gatherv(sendBuf, sendCount, MPI_INT,
-                recvBuf, recvCounts, displs, MPI_INT,
-                0, MPI_COMM_WORLD);
+    MPI_Gatherv(sendBuf, sendCount, MPI_INT, recvBuf, recvCounts, displs, MPI_INT, 0, MPI_COMM_WORLD);
 
-    // --- собираем NeighborList на root ---
     if(rank==0){
         for(int i=0;i<grid->atomsCount;i++){
             neighbors[i].count=0;

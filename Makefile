@@ -16,6 +16,7 @@ MPIRUN = mpirun
 LIBS = -lm
 
 NP = 8
+MP = 8
 
 .PHONY: build, run, clean, generate, buildMpi, buildLinear
 
@@ -56,7 +57,7 @@ buildOpenMP: cleanOpenMP gridOpenMP.c
 	$(GCC) -fopenmp gridOpenMP.c utils.c $(LIBS) -o $(TARGETOPENMP)
 	
 runOpenMP: buildOpenMP
-	OMP_NUM_THREADS=8 ./$(TARGETOPENMP)  $(FILE)
+	OMP_NUM_THREADS=$(MP) ./$(TARGETOPENMP)  $(FILE)
 
 clean: cleanOpenMP
 	rm -rf $(TARGETLINEAR)
