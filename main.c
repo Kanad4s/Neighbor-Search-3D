@@ -4,6 +4,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "utils.h"
+#include "mpi.h"
 
 const int NEIGHBORS_COUNT = 4;
 const double NEIGHBOR_RADIUS = 2.5;
@@ -33,7 +34,11 @@ int main(int argc, char *argv[]) {
         neighbors[i].count = 0;
     }
     
+    double start = MPI_Wtime();
     findNeighbors(atoms, realCount, neighbors);
+    double finish = MPI_Wtime();
+    printf("TIME: %f\n", finish - start);
+    
     writeFile(atoms, neighbors, realCount, WRITE_FILE_NAME);
     return 0;
 }

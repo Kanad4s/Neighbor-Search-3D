@@ -16,6 +16,7 @@ MPIRUN = mpirun
 LIBS = -lm
 
 NP = 8
+MP = 8
 
 .PHONY: build, run, clean, generate, buildMpi, buildLinear
 
@@ -23,7 +24,7 @@ cleanLinear:
 	rm -rf  $(TARGETLINEAR)
 
 buildLinear: cleanLinear main.c
-	$(GCC) main.c $(UTILS) -o $(TARGETLINEAR) $(LIBS)
+	$(MPICC) main.c $(UTILS) -o $(TARGETLINEAR) $(LIBS)
 
 runLinear: buildLinear
 	./$(TARGETLINEAR) $(FILE)
@@ -33,7 +34,7 @@ cleanCells:
 	rm -rf $(TARGETCELLS)
 
 buildCells: cleanCells gridLinear.c
-	$(GCC) gridLinear.c $(UTILS) -o $(TARGETCELLS) $(LIBS)
+	$(MPICC) gridLinear.c $(UTILS) -o $(TARGETCELLS) $(LIBS)
 
 runGrid: buildCells
 	./$(TARGETCELLS) $(FILE)
@@ -53,10 +54,10 @@ cleanOpenMP:
 	rm -rf $(TARGETOPENMP)
 
 buildOpenMP: cleanOpenMP gridOpenMP.c
-	$(GCC) -fopenmp gridOpenMP.c utils.c $(LIBS) -o $(TARGETOPENMP)
+	$(MPICC) -fopenmp gridOpenMP.c utils.c $(LIBS) -o $(TARGETOPENMP)
 	
 runOpenMP: buildOpenMP
-	OMP_NUM_THREADS=8 ./$(TARGETOPENMP)  $(FILE)
+	OMP_NUM_THREADS=$(MP) ./$(TARGETOPENMP)  $(FILE)
 
 clean: cleanOpenMP
 	rm -rf $(TARGETLINEAR)

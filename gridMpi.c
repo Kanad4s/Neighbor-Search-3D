@@ -19,8 +19,10 @@ void findNeighborsInNearCells(Grid *grid, int cellId, Atom atom, NeighborList *n
 int getNearCellsIDs(Grid *grid, int cellId, int *cellNeighbors);
 int isCellIdAdded(int *cellNeighborsIDS, int cellNeighbors, int cellID);
 
+
+int rank, nProcesses;
+
 int main(int argc, char *argv[]) {
-    int rank, nProcesses;
     Atom *atoms;
     NeighborList *neighbors;
     Grid *grid;
@@ -30,6 +32,9 @@ int main(int argc, char *argv[]) {
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &nProcesses);
+    if (rank == 0) {
+        printf("nProcesses: %d\n", nProcesses);
+    }
 
     if(rank==0 && cellsX % nProcesses != 0){
         printf("ABORTED: cellsX not divisible by nProcesses\n");
@@ -69,8 +74,14 @@ int main(int argc, char *argv[]) {
     int startCell = rank * cellsPerProc;
     int endCell = (rank==nProcesses-1) ? cellsCount : startCell + cellsPerProc;
 
-    for(int i=startCell;i<endCell;i++){
-        findNeighborsInCell(grid, &grid->cells[i], i, neighbors);
+    double start = MPI_Wtime();
+    // for(int i=startCell;i<endCell;i++){
+    //     findNeighborsInCell(grid, &grid->cells[i], i, neighbors);
+    // }
+    findNeighbors(grid, neighbors, startCell, endCell);
+    double finish = MPI_Wtime();
+    if (rank == 0) {
+        printf("TIME: %f\n", finish - start);
     }
 
     int sendCount = grid->atomsCount * NEIGHBORS_COUNT_MAX;
@@ -129,14 +140,16 @@ Grid* formGrid(Atom* atoms, int atomsCount, int xCells, int yCells, int zCells, 
     int cellsCount = xCells * yCells * zCells;
     int atomsPerCell = atomsCount / cellsCount;
     // printf("Cells: %d\n", cellsCount);
-    printf("Atoms per cell: %d\n", atomsPerCell);
+    if (rank == 0) {
+        printf("Atoms per cell: %d\n", atomsPerCell);
+    }
     grid->xCellsCount = xCells;
     grid->yCellsCount = yCells;
     grid->zCellsCount = zCells;
     grid->atomsCount = atomsCount;
     
-    if (atomsCount % cellsCount != 0) {
-        printf("WARNING: atomsCount %% cellsCount = %d != 0\n", atomsCount % cellsCount);
+    if (atomsCount % cellsCount != 0 && rank == 0) {
+        printf("WARNING: %d (atomsCount) %% %d (cellsCount) = %d != 0\n", atomsCount, cellsCount, atomsCount % cellsCount);
         atomsPerCell++;
         printf("Updated atoms per cell: %d\n", atomsPerCell);
     }
@@ -169,13 +182,13 @@ Grid* formGrid(Atom* atoms, int atomsCount, int xCells, int yCells, int zCells, 
     return grid;
 }
 
-void findNeighbors(Grid *grid, NeighborList *neighbors, int rank, int nProcesses) {
-    int cellsCount = grid->xCellsCount * grid->yCellsCount * grid->zCellsCount;
-    int start = cellsCount / nProcesses * rank;
-    int finish = cellsCount / nProcesses * (rank + 1);
+void findNeighbors(Grid *grid, NeighborList *neighbors, int startCell, int endCell) {
+    // int cellsCount = grid->xCellsCount * grid->yCellsCount * grid->zCellsCount;
+    // int start = cellsCount / nProcesses * rank;
+    // int finish = cellsCount / nProcesses * (rank + 1);
     
     #pragma omp parallel for schedule(dynamic)
-    for (int i = start; i < finish; i++) {
+    for (int i = startCell; i < endCell; i++) {
         findNeighborsInCell(grid, &grid->cells[i], i, neighbors);
     }
 }
@@ -205,11 +218,6 @@ void findNeighborsInNearCells(Grid *grid, int cellId, Atom atom, NeighborList *n
     for (int i = 0; i < neighborCellsCount; i++) {
         for (int j = 0; j < grid->cells[neighborCellsID[i]].atomsCount; j++) {
             if (isNeighbor(atom, grid->cells[neighborCellsID[i]].atoms[j], NEIGHBOR_RADIUS)) {
-                if (atom.id == 18331) {
-                    printf("i: %d, j: %d\n", i, j);
-                    printf("cell ID: %d, atomID: %d\n", neighborCellsID[i], grid->cells[neighborCellsID[i]].atoms[j].id);
-
-                }
                 if (neighbors[atom.id].count < NEIGHBORS_COUNT_MAX) {
                     neighbors[atom.id].ids[neighbors[atom.id].count] = grid->cells[neighborCellsID[i]].atoms[j].id;
                     neighbors[atom.id].count++;

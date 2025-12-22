@@ -5,6 +5,7 @@
 #include <ctype.h>
 #include <unistd.h>
 #include "utils.h"
+#include "mpi.h"
 
 const int NEIGHBORS_COUNT_MAX = 4;
 const double NEIGHBOR_RADIUS = 2.5;
@@ -58,7 +59,10 @@ int main(int argc, char *argv[]) {
         neighbors[i].count = 0;
     }
 
+    double start = MPI_Wtime();
     findNeighbors(grid, neighbors);
+    double finish = MPI_Wtime();
+    printf("TIME: %f\n", finish - start);
 
     writeFile(atoms, neighbors, atomsCount, WRITE_FILE_NAME);
     return 0;
@@ -130,23 +134,9 @@ void findNeighborsInCell(Grid *grid, GridCell *cell, int cellId, NeighborList *n
                 }
             }
         }
-        if (id == 18331) {
-            printf("BEFORE FindNeighborsInNearCells, atomID: %d neighbors: ", id);
-            for (int k = 0; k < neighbors[id].count; k++) {
-                printf("neighbor: %d, ", neighbors[id].ids[k]);
-            }
-            printf("\n");
-        }
         
         if (neighbors[id].count < NEIGHBORS_COUNT_MAX) {
             findNeighborsInNearCells(grid, cellId, cell->atoms[i], neighbors);
-        }
-        if (id == 18331) {
-            printf("AFTER FindNeighborsInNearCells, atomID: %d neighbors: ", id);
-            for (int k = 0; k < neighbors[id].count; k++) {
-                printf("neighbor: %d, ", neighbors[id].ids[k]);
-            }
-            printf("\n");
         }
     }
 }
@@ -158,11 +148,6 @@ void findNeighborsInNearCells(Grid *grid, int cellId, Atom atom, NeighborList *n
     for (int i = 0; i < neighborCellsCount; i++) {
         for (int j = 0; j < grid->cells[neighborCellsID[i]].atomsCount; j++) {
             if (isNeighbor(atom, grid->cells[neighborCellsID[i]].atoms[j], NEIGHBOR_RADIUS)) {
-                if (atom.id == 18331) {
-                    printf("i: %d, j: %d\n", i, j);
-                    printf("cell ID: %d, atomID: %d\n", neighborCellsID[i], grid->cells[neighborCellsID[i]].atoms[j].id);
-
-                }
                 if (neighbors[atom.id].count < NEIGHBORS_COUNT_MAX) {
                     neighbors[atom.id].ids[neighbors[atom.id].count] = grid->cells[neighborCellsID[i]].atoms[j].id;
                     neighbors[atom.id].count++;
