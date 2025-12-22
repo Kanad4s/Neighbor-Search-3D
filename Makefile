@@ -57,7 +57,7 @@ buildOpenMP: cleanOpenMP gridOpenMP.c
 	$(GCC) -fopenmp gridOpenMP.c utils.c $(LIBS) -o $(TARGETOPENMP)
 	
 runOpenMP: buildOpenMP
-	OMP_NUM_THREADS=$(MP) ./$(TARGETOPENMP)  $(FILE)
+	OMP_NUM_THREADS=$(MP) ./$(TARGETOPENMP) $(FILE)
 
 clean: cleanOpenMP
 	rm -rf $(TARGETLINEAR)

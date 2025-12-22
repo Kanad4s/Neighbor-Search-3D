@@ -24,8 +24,7 @@ int main(int argc, char *argv[]) {
     Atom *atoms;
     NeighborList *neighbors;
     Grid *grid;
-    int atomsCount = 18389;
-    int cellsX = 24, cellsY = 20, cellsZ = 2;
+    int cellsX = 24, cellsY = 24, cellsZ = 2;
 
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -44,14 +43,9 @@ int main(int argc, char *argv[]) {
     }
 
     Substract substract;
-    int realCount = 0;
+    int atomsCount;
     if(rank==0){
-        realCount = read_cls_with_bounds(argv[1], &atoms, atomsCount, &substract);
-        if(realCount != atomsCount){
-            printf("Warning: atoms in file (%d) != expected (%d)\n", realCount, atomsCount);
-        }
-    } else {
-        atoms = malloc(atomsCount * sizeof(Atom));
+        atomsCount = read_cls_with_bounds(argv[1], &atoms, &substract);
     }
 
     MPI_Bcast(&substract, sizeof(Substract), MPI_BYTE, 0, MPI_COMM_WORLD);
@@ -70,6 +64,7 @@ int main(int argc, char *argv[]) {
     int startCell = rank * cellsPerProc;
     int endCell = (rank==nProcesses-1) ? cellsCount : startCell + cellsPerProc;
 
+    #pragma omp parallel for schedule(dynamic)
     for(int i=startCell;i<endCell;i++){
         findNeighborsInCell(grid, &grid->cells[i], i, neighbors);
     }
@@ -135,9 +130,9 @@ Grid* formGrid(Atom* atoms, int atomsCount, int xCells, int yCells, int zCells, 
     grid->atomsCount = atomsCount;
     
     if (atomsCount % cellsCount != 0) {
-        printf("WARNING: atomsCount %% cellsCount = %d != 0\n", atomsCount % cellsCount);
+        // printf("WARNING: atomsCount %% cellsCount = %d != 0\n", atomsCount % cellsCount);
         atomsPerCell++;
-        printf("Updated atoms per cell: %d\n", atomsPerCell);
+        // printf("Updated atoms per cell: %d\n", atomsPerCell);
     }
 
     int totalCells = xCells * yCells * zCells;
@@ -204,11 +199,6 @@ void findNeighborsInNearCells(Grid *grid, int cellId, Atom atom, NeighborList *n
     for (int i = 0; i < neighborCellsCount; i++) {
         for (int j = 0; j < grid->cells[neighborCellsID[i]].atomsCount; j++) {
             if (isNeighbor(atom, grid->cells[neighborCellsID[i]].atoms[j], NEIGHBOR_RADIUS)) {
-                if (atom.id == 18331) {
-                    printf("i: %d, j: %d\n", i, j);
-                    printf("cell ID: %d, atomID: %d\n", neighborCellsID[i], grid->cells[neighborCellsID[i]].atoms[j].id);
-
-                }
                 if (neighbors[atom.id].count < NEIGHBORS_COUNT_MAX) {
                     neighbors[atom.id].ids[neighbors[atom.id].count] = grid->cells[neighborCellsID[i]].atoms[j].id;
                     neighbors[atom.id].count++;

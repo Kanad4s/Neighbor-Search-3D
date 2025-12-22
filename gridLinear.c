@@ -24,7 +24,6 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     printf("Passed file: %s\n", argv[1]);
-    int atomsCount = 18389;
 
     int cellsX = 20;
     int cellsY = 20;
@@ -37,15 +36,11 @@ int main(int argc, char *argv[]) {
     printf("Cells: %d\n", cellsX * cellsY * cellsZ);
     Atom* atoms;
     Substract substract;
-    int realCount = read_cls_with_bounds(argv[1], &atoms, atomsCount, &substract);
+    int atomsCount = read_cls_with_bounds(argv[1], &atoms, &substract);
     printf("minX: %lf, maxX %lf, minY: %lf, maxY %lf, minZ: %lf, maxZ %lf\n", 
         substract.minX, substract.maxX, substract.minY, substract.maxY, substract.minZ, substract.maxZ);
-    if (realCount != atomsCount) {
-        printf("WARNING: atoms count in file %d != %d atoms expected\n", realCount, atomsCount);
-        // return 0; 
-    }
 
-    Grid* grid = formGrid(atoms, realCount, cellsX, cellsY, cellsZ, substract);
+    Grid* grid = formGrid(atoms, atomsCount, cellsX, cellsY, cellsZ, substract);
     printf("grid formed\n");
     // printGrid(grid);
     for (int i = 0; i < grid->xCellsCount * grid->yCellsCount * grid->zCellsCount; i++) {

@@ -95,12 +95,15 @@ int read_cls(const char *filename, Atom **atomsOut, int atomsCount, int cellsCou
     return count;
 }
 
-int read_cls_with_bounds(const char *filename, Atom **atomsOut, int atomsCount,Substract *substract) {
+int read_cls_with_bounds(const char *filename, Atom **atomsOut, Substract *substract) {
     FILE *f = fopen(filename, "r");
     if (!f) {
         perror("Ошибка открытия файла");
         return -1;
     }
+    int atomsCount;
+    fscanf(f, "%d\n", &atomsCount);
+    printf("atoms count: %d\n", atomsCount);
 
     char line[256];
     int count = 0;
@@ -110,7 +113,7 @@ int read_cls_with_bounds(const char *filename, Atom **atomsOut, int atomsCount,S
         return -1;
     }
 
-    for (int i = 0; i < 4; i++) fgets(line, sizeof(line), f);
+    for (int i = 0; i < 3; i++) fgets(line, sizeof(line), f);
 
     int firstAtom = 1;
     while (fgets(line, sizeof(line), f)) {
@@ -155,6 +158,7 @@ int read_cls_with_bounds(const char *filename, Atom **atomsOut, int atomsCount,S
             if (a.z > substract->maxZ) substract->maxZ = a.z;
         }
     }
+    printf("real count: %d\n", count);
 
     fclose(f);
     *atomsOut = atoms;

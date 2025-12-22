@@ -28,10 +28,8 @@ int main(int argc, char *argv[]) {
     printf("Passed file: %s\n", argv[1]);
     printf("threads = %d\n", omp_get_max_threads());
 
-    int atomsCount = 18389;
-
-    int cellsX = 20;
-    int cellsY = 20;
+    int cellsX = 24;
+    int cellsY = 24;
     int cellsZ = 2;
     // int cellsX = 17;
     // int cellsY = 17;
@@ -41,15 +39,11 @@ int main(int argc, char *argv[]) {
     printf("Cells: %d\n", cellsX * cellsY * cellsZ);
     Atom* atoms;
     Substract substract;
-    int realCount = read_cls_with_bounds(argv[1], &atoms, atomsCount, &substract);
+    int atomsCount = read_cls_with_bounds(argv[1], &atoms, &substract);
     printf("minX: %lf, maxX %lf, minY: %lf, maxY %lf, minZ: %lf, maxZ %lf\n", 
         substract.minX, substract.maxX, substract.minY, substract.maxY, substract.minZ, substract.maxZ);
-    if (realCount != atomsCount) {
-        printf("WARNING: atoms count in file %d != %d atoms expected\n", realCount, atomsCount);
-        // return 0; 
-    }
 
-    Grid* grid = formGrid(atoms, realCount, cellsX, cellsY, cellsZ, substract);
+    Grid* grid = formGrid(atoms, atomsCount, cellsX, cellsY, cellsZ, substract);
     printf("grid formed\n");
     // printGrid(grid);
     for (int i = 0; i < grid->xCellsCount * grid->yCellsCount * grid->zCellsCount; i++) {
@@ -136,23 +130,9 @@ void findNeighborsInCell(Grid *grid, GridCell *cell, int cellId, NeighborList *n
                 }
             }
         }
-        if (id == 18331) {
-            printf("BEFORE FindNeighborsInNearCells, atomID: %d neighbors: ", id);
-            for (int k = 0; k < neighbors[id].count; k++) {
-                printf("neighbor: %d, ", neighbors[id].ids[k]);
-            }
-            printf("\n");
-        }
         
         if (neighbors[id].count < NEIGHBORS_COUNT_MAX) {
             findNeighborsInNearCells(grid, cellId, cell->atoms[i], neighbors);
-        }
-        if (id == 18331) {
-            printf("AFTER FindNeighborsInNearCells, atomID: %d neighbors: ", id);
-            for (int k = 0; k < neighbors[id].count; k++) {
-                printf("neighbor: %d, ", neighbors[id].ids[k]);
-            }
-            printf("\n");
         }
     }
 }
