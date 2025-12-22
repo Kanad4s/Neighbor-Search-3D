@@ -12,7 +12,7 @@ const double NEIGHBOR_RADIUS = 2.5;
 const int MAX_CELL_NEIGHBORS_COUNT = 26;
 char *WRITE_FILE_NAME = "gridMpi.csv";
 
-void findNeighbors(Grid *grid, NeighborList *neighbors);
+void findNeighbors(Grid *grid, NeighborList *neighbors, int rank, int nProcesses);
 Grid* formGrid(Atom *atoms, int atomsCount, int xCells, int yCells, int zCells, Substract substract);
 void findNeighborsInCell(Grid *grid, GridCell *cell, int cellId, NeighborList *neighbors);
 void findNeighborsInNearCells(Grid *grid, int cellId, Atom atom, NeighborList *neighbors);
@@ -20,76 +20,109 @@ int getNearCellsIDs(Grid *grid, int cellId, int *cellNeighbors);
 int isCellIdAdded(int *cellNeighborsIDS, int cellNeighbors, int cellID);
 
 int main(int argc, char *argv[]) {
-    int rank;
-    int nProcesses;
-    Atom* atoms;
+    int rank, nProcesses;
+    Atom *atoms;
     NeighborList *neighbors;
-    Grid* grid;
-    int atomsCount = 18389;
-    int cellsX = 20;
-    int cellsY = 20;
-    int cellsZ = 2;
-
-    int cellsCount = cellsX * cellsY * cellsZ;
+    Grid *grid;
+    int atomsCount = 18389;  // реально используемое число атомов
+    int cellsX = 24, cellsY = 20, cellsZ = 2;
 
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &nProcesses);
 
-    if (rank == 0 && cellsX % nProcesses != 0) {
-        printf("ABORTED: the number of cells on the x-axis (%d) is not divisible by number of processes (%d) - %d %% %d = %d\n",
-            cellsX, nProcesses, cellsX, nProcesses, cellsX % nProcesses);
-        
+    if(rank==0 && cellsX % nProcesses != 0){
+        printf("ABORTED: cellsX not divisible by nProcesses\n");
         MPI_Finalize();
-        return 0;
+        return 1;
     }
 
-    if (rank == 0) {
-        if (argc < 2) {
-            printf("Usage: %s <filename>\n", argv[0]);
-            return 1;
-        }
-        printf("Passed file: %s\n", argv[1]);
-        printf("Cells: %d\n", cellsX * cellsY * cellsZ);
-        Substract substract;
-        int realCount = read_cls_with_bounds(argv[1], &atoms, atomsCount, &substract);
-        printf("minX: %lf, maxX %lf, minY: %lf, maxY %lf, minZ: %lf, maxZ %lf\n", 
-            substract.minX, substract.maxX, substract.minY, substract.maxY, substract.minZ, substract.maxZ);
-        if (realCount != atomsCount) {
-            printf("WARNING: atoms count in file %d != %d atoms expected\n", realCount, atomsCount);
-            // return 0; 
-        }
+    if(argc < 2){
+        if(rank==0) printf("Usage: %s <filename>\n", argv[0]);
+        MPI_Finalize();
+        return 1;
+    }
 
-        grid = formGrid(atoms, realCount, cellsX, cellsY, cellsZ, substract);
-        printf("grid formed\n");
-        
-        neighbors = malloc(grid->atomsCount * sizeof(NeighborList));
-        for (int i = 0; i < grid->atomsCount; i++) {
-            neighbors[i].ids = malloc(NEIGHBORS_COUNT_MAX * sizeof(int));
-            neighbors[i].count = 0;
-        }
+    Substract substract;
+    int realCount = 0;
+    if(rank==0){
+        realCount = read_cls_with_bounds(argv[1], &atoms, atomsCount, &substract);
+        if(realCount != atomsCount)
+            printf("Warning: atoms in file (%d) != expected (%d)\n", realCount, atomsCount);
     } else {
-        neighbors = malloc(grid->atomsCount / nProcesses * sizeof(NeighborList));
-        for (int i = 0; i < grid->atomsCount; i++) {
-            neighbors[i].ids = malloc(NEIGHBORS_COUNT_MAX * sizeof(int));
-            neighbors[i].count = 0;
+        atoms = malloc(atomsCount * sizeof(Atom));
+    }
+
+    // --- Bcast атомов и Substract ---
+    MPI_Bcast(&substract, sizeof(Substract), MPI_BYTE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(atoms, atomsCount*sizeof(Atom), MPI_BYTE, 0, MPI_COMM_WORLD);
+
+    // --- создаём Grid на всех процессах ---
+    grid = formGrid(atoms, atomsCount, cellsX, cellsY, cellsZ, substract);
+
+    // --- выделяем память под neighbors ---
+    neighbors = malloc(grid->atomsCount * sizeof(NeighborList));
+    for(int i=0;i<grid->atomsCount;i++){
+        neighbors[i].ids = malloc(NEIGHBORS_COUNT_MAX*sizeof(int));
+        neighbors[i].count = 0;
+    }
+
+    // --- распределение клеток по процессам ---
+    int cellsCount = grid->xCellsCount * grid->yCellsCount * grid->zCellsCount;
+    int cellsPerProc = cellsCount / nProcesses;
+    int startCell = rank * cellsPerProc;
+    int endCell = (rank==nProcesses-1) ? cellsCount : startCell + cellsPerProc;
+
+    // --- поиск соседей ---
+    for(int i=startCell;i<endCell;i++){
+        findNeighborsInCell(grid, &grid->cells[i], i, neighbors);
+    }
+
+    // --- сериализация NeighborList для Gatherv ---
+    int sendCount = grid->atomsCount * NEIGHBORS_COUNT_MAX;
+    int *sendBuf = malloc(sendCount * sizeof(int));
+    for(int i=0;i<grid->atomsCount;i++){
+        for(int j=0;j<NEIGHBORS_COUNT_MAX;j++){
+            sendBuf[i*NEIGHBORS_COUNT_MAX+j] = (j<neighbors[i].count) ? neighbors[i].ids[j] : -1;
         }
     }
-    // neighbors->ids = neighbors->ids[cellsCount / nProcesses * rank];
-    // neighbors->count = neighbors->count / nProcesses;
 
-    findNeighbors(grid, neighbors);
-
-    if (rank == 0) {
-        findNeighbors(grid, neighbors);
-
+    int *recvCounts=NULL, *displs=NULL, *recvBuf=NULL;
+    if(rank==0){
+        recvCounts = malloc(nProcesses*sizeof(int));
+        displs = malloc(nProcesses*sizeof(int));
+        for(int i=0;i<nProcesses;i++){
+            recvCounts[i] = sendCount;
+            displs[i] = (i==0)?0:displs[i-1]+recvCounts[i-1];
+        }
+        recvBuf = malloc(sendCount*nProcesses*sizeof(int));
     }
 
-    if (rank == 0) {
-        writeFile(atoms, neighbors, atomsCount, WRITE_FILE_NAME);
-        free(neighbors);
+    MPI_Gatherv(sendBuf, sendCount, MPI_INT,
+                recvBuf, recvCounts, displs, MPI_INT,
+                0, MPI_COMM_WORLD);
+
+    // --- собираем NeighborList на root ---
+    if(rank==0){
+        for(int i=0;i<grid->atomsCount;i++){
+            neighbors[i].count=0;
+            for(int j=0;j<NEIGHBORS_COUNT_MAX;j++){
+                for(int p=0;p<nProcesses;p++){
+                    int val = recvBuf[p*sendCount + i*NEIGHBORS_COUNT_MAX + j];
+                    if(val!=-1 && neighbors[i].count<NEIGHBORS_COUNT_MAX)
+                        neighbors[i].ids[neighbors[i].count++] = val;
+                }
+            }
+        }
+
+        writeFile(atoms, neighbors, grid->atomsCount, "gridMpi.csv");
+        free(recvBuf); free(recvCounts); free(displs);
     }
 
+    free(sendBuf);
+    for(int i=0;i<grid->atomsCount;i++) free(neighbors[i].ids);
+    free(neighbors);
+    free(atoms);
     MPI_Finalize();
     return 0;
 }
@@ -143,9 +176,13 @@ Grid* formGrid(Atom* atoms, int atomsCount, int xCells, int yCells, int zCells, 
     return grid;
 }
 
-void findNeighbors(Grid *grid, NeighborList *neighbors) {
+void findNeighbors(Grid *grid, NeighborList *neighbors, int rank, int nProcesses) {
     int cellsCount = grid->xCellsCount * grid->yCellsCount * grid->zCellsCount;
-    for (int i = 0; i < cellsCount; i++) {
+    int start = cellsCount / nProcesses * rank;
+    int finish = cellsCount / nProcesses * (rank + 1);
+    
+    #pragma omp parallel for schedule(dynamic)
+    for (int i = start; i < finish; i++) {
         findNeighborsInCell(grid, &grid->cells[i], i, neighbors);
     }
 }
