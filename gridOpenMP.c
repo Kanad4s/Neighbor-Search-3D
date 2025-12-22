@@ -30,8 +30,8 @@ int main(int argc, char *argv[]) {
 
     int atomsCount = 18389;
 
-    int cellsX = 20;
-    int cellsY = 20;
+    int cellsX = 24;
+    int cellsY = 24;
     int cellsZ = 2;
     // int cellsX = 17;
     // int cellsY = 17;
