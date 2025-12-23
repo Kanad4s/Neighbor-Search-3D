@@ -27,12 +27,9 @@ int main(int argc, char *argv[]) {
     printf("Passed file: %s\n", argv[1]);
     int atomsCount = 18389;
 
-    int cellsX = 20;
-    int cellsY = 20;
+    int cellsX = 8;
+    int cellsY = 8;
     int cellsZ = 2;
-    // int cellsX = 17;
-    // int cellsY = 17;
-    // int cellsZ = 2;
 
     int cellsCount = cellsX * cellsY * cellsZ;
     printf("Cells: %d\n", cellsX * cellsY * cellsZ);
@@ -51,6 +48,7 @@ int main(int argc, char *argv[]) {
     // printGrid(grid);
     for (int i = 0; i < grid->xCellsCount * grid->yCellsCount * grid->zCellsCount; i++) {
         // printf("cell: %d has atoms: %d\n", i, grid->cells[i].atomsCount);
+        // printf("cell %d atoms %d\n", i, grid->cells->atomsCount);
     }
     
     NeighborList *neighbors = malloc(grid->atomsCount * sizeof(NeighborList));
@@ -64,7 +62,7 @@ int main(int argc, char *argv[]) {
     double finish = MPI_Wtime();
     printf("TIME: %f\n", finish - start);
 
-    writeFile(atoms, neighbors, atomsCount, WRITE_FILE_NAME);
+    writeFile(atoms, neighbors, realCount, WRITE_FILE_NAME);
     return 0;
 }
 
@@ -94,7 +92,8 @@ Grid* formGrid(Atom* atoms, int atomsCount, int xCells, int yCells, int zCells, 
 
     for (int i = 0; i < totalCells; i++) {
         grid->cells[i].atomsCount = 0;
-        grid->cells[i].atoms = malloc(((atomsCount / totalCells) * 2.1) * sizeof(Atom)); 
+        grid->cells[i].atoms = malloc(((atomsCount / totalCells) * 10) * sizeof(Atom)); 
+        // printf("atoms: %d\n", (atomsCount / totalCells) * NEIGHBORS_COUNT_MAX);
     }
 
     for (int i = 0; i < atomsCount; i++) {

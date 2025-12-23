@@ -12,7 +12,7 @@ const double NEIGHBOR_RADIUS = 2.5;
 const int MAX_CELL_NEIGHBORS_COUNT = 26;
 char *WRITE_FILE_NAME = "gridMpi.csv";
 
-void findNeighbors(Grid *grid, NeighborList *neighbors, int rank, int nProcesses);
+void findNeighbors(Grid *grid, NeighborList *neighbors, int startCell, int endCell);
 Grid* formGrid(Atom *atoms, int atomsCount, int xCells, int yCells, int zCells, Substract substract);
 void findNeighborsInCell(Grid *grid, GridCell *cell, int cellId, NeighborList *neighbors);
 void findNeighborsInNearCells(Grid *grid, int cellId, Atom atom, NeighborList *neighbors);
@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
     NeighborList *neighbors;
     Grid *grid;
     int atomsCount = 18389;
-    int cellsX = 24, cellsY = 24, cellsZ = 2;
+    int cellsX = 40, cellsY = 40, cellsZ = 2;
 
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -49,19 +49,19 @@ int main(int argc, char *argv[]) {
     }
 
     Substract substract;
-    int realCount = 0;
+    int realCount = read_cls_with_bounds(argv[1], &atoms, atomsCount, &substract);
     if(rank==0){
-        realCount = read_cls_with_bounds(argv[1], &atoms, atomsCount, &substract);
         if(realCount != atomsCount)
             printf("Warning: atoms in file (%d) != expected (%d)\n", realCount, atomsCount);
     } else {
-        atoms = malloc(atomsCount * sizeof(Atom));
+        atoms = malloc(realCount * sizeof(Atom));
     }
+    // printf("atomsCount %d\nrealCount %d\n", atomsCount, realCount);
 
     MPI_Bcast(&substract, sizeof(Substract), MPI_BYTE, 0, MPI_COMM_WORLD);
-    MPI_Bcast(atoms, atomsCount*sizeof(Atom), MPI_BYTE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(atoms, realCount*sizeof(Atom), MPI_BYTE, 0, MPI_COMM_WORLD);
 
-    grid = formGrid(atoms, atomsCount, cellsX, cellsY, cellsZ, substract);
+    grid = formGrid(atoms, realCount, cellsX, cellsY, cellsZ, substract);
 
     neighbors = malloc(grid->atomsCount * sizeof(NeighborList));
     for(int i=0;i<grid->atomsCount;i++){
@@ -160,7 +160,7 @@ Grid* formGrid(Atom* atoms, int atomsCount, int xCells, int yCells, int zCells, 
     for (int i = 0; i < totalCells; i++) {
         grid->cells[i].id = i;
         grid->cells[i].atomsCount = 0;
-        grid->cells[i].atoms = malloc(((atomsCount / totalCells) * 2.1) * sizeof(Atom)); 
+        grid->cells[i].atoms = malloc(((atomsCount / totalCells) * 10) * sizeof(Atom)); 
     }
 
     for (int i = 0; i < atomsCount; i++) {
@@ -187,7 +187,7 @@ void findNeighbors(Grid *grid, NeighborList *neighbors, int startCell, int endCe
     // int start = cellsCount / nProcesses * rank;
     // int finish = cellsCount / nProcesses * (rank + 1);
     
-    #pragma omp parallel for schedule(dynamic)
+    // #pragma omp parallel for schedule(dynamic)
     for (int i = startCell; i < endCell; i++) {
         findNeighborsInCell(grid, &grid->cells[i], i, neighbors);
     }
@@ -277,6 +277,7 @@ int isCellIdAdded(int *cellNeighborsIDS, int cellNeighbors, int cellID) {
 }
 
 void idToXyz(int id, int Nx, int Ny, int Nz, int *x, int *y, int *z) {
+    Nz = Nz;
     *z = id / (Nx * Ny);
     int rem = id % (Nx * Ny);
     *y = rem / Nx;

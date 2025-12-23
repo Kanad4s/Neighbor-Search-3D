@@ -40,6 +40,7 @@ void writeFile(Atom *atoms, NeighborList *neighbors, int atomsCount, char *filen
 }
 
 int read_cls(const char *filename, Atom **atomsOut, int atomsCount, int cellsCount) {
+    cellsCount = cellsCount;
     FILE *f = fopen(filename, "r");
     if (!f) {
         perror("Ошибка открытия файла");
@@ -95,7 +96,7 @@ int read_cls(const char *filename, Atom **atomsOut, int atomsCount, int cellsCou
     return count;
 }
 
-int read_cls_with_bounds(const char *filename, Atom **atomsOut, int atomsCount,Substract *substract) {
+int read_cls_with_bounds(const char *filename, Atom **atomsOut, int atomsCount, Substract *substract) {
     FILE *f = fopen(filename, "r");
     if (!f) {
         perror("Ошибка открытия файла");
@@ -231,6 +232,7 @@ void printAtom(Atom atom) {
 }
 
 int convertCellCoordsToId(int x, int y, int z, int Nx, int Ny, int Nz) {
+    Nz += 2;
     // printf("convertCellCoordsToID: x: %d, y: %d, z:%d, Nx: %d, Ny: %d, Nz: %d, ConvertedCellID: %d\n", x, y, z, Nx, Ny, Nz, x + y * Nx + z * Nx * Ny);
     return x + y * Nx + z * Nx * Ny;
 }

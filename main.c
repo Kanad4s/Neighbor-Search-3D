@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
     findNeighbors(atoms, realCount, neighbors);
     double finish = MPI_Wtime();
     printf("TIME: %f\n", finish - start);
-    
+
     writeFile(atoms, neighbors, realCount, WRITE_FILE_NAME);
     return 0;
 }
@@ -46,7 +46,6 @@ int main(int argc, char *argv[]) {
 void findNeighbors(Atom *atoms, int count, NeighborList *neighbors) { 
     for (int i = 0; i < count; i++) {
         Atom a = atoms[i];
-        // поиск соседей
         for (int j = 0; j < count; j++) {
             if (j == i) {
                 continue;

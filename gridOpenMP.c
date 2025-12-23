@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
     double finish = MPI_Wtime();
     printf("TIME: %f\n", finish - start);
 
-    writeFile(atoms, neighbors, atomsCount, WRITE_FILE_NAME);
+    writeFile(atoms, neighbors, realCount, WRITE_FILE_NAME);
     return 0;
 }
 
@@ -98,7 +98,7 @@ Grid* formGrid(Atom* atoms, int atomsCount, int xCells, int yCells, int zCells, 
 
     for (int i = 0; i < totalCells; i++) {
         grid->cells[i].atomsCount = 0;
-        grid->cells[i].atoms = malloc(((atomsCount / totalCells) * 2.1) * sizeof(Atom)); 
+        grid->cells[i].atoms = malloc(((atomsCount / totalCells) * 10) * sizeof(Atom)); 
     }
 
     for (int i = 0; i < atomsCount; i++) {
